@@ -1,0 +1,113 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+*~
+
+# doc
+doc/html
+doc/latex
+doc/doc
+docs/web-data
+
+#dmlc
+config.mk
+
+*.pyc
+.Rhistory
+*log
+Debug
+*suo
+tracker
+
+# vim
+*.swp
+*.swo
+*.swn
+.vimrc
+.ycm_extra_conf.py
+.ycm_extra_conf.pyc
+
+# Emacs
+.#*
+.clang_complete
+.dir-locals.el
+__pycache__
+*.pkl
+*.params
+*.json
+*.d
+build
+data
+recommonmark
+bin
+deps
+
+# R
+*.Rcheck
+*.rds
+*.Rproj
+.Rproj.user
+R-package/inst/*
+*.tar.gz
+*.tgz
+R-package/man/*.Rd
+
+# data
+*.rec
+*.lst
+*.zip
+*ubyte
+*.bin
+*.txt
+
+# ipython notebook
+*_pb2.py
+*.ipynb_checkpoints*
+input.txt*
+
+# Jetbrain
+.idea
+
+# ctags
+tags
+
+# Scala package
+*.class
+scala-package/*/target/
+scala-package/*/*/target/
+*.scala_dependencies
+*.worksheet
+*.idea
+*.iml
+*.classpath
+*.project
+*.settings
+!scala-package/*/bin
+
+# cffi generated
+_ext
