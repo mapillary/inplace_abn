@@ -49,6 +49,16 @@ To change this (_e.g._ if you are using a Kepler GPU), please edit the `CUDA_GEN
 
 ## Training on ImageNet
 
+Results from our arXiv paper (top-5 / top-10):
+
+| Network                      | Batch | 224            | 224, 10-crops  | 320           |
+|------------------------------|-------|----------------|----------------|---------------|
+| ResNeXt101, Std-BN           | 256   | 77.04 / 93.50  | 78.72 / 94.47  | 77.92 / 94.28 |
+| ResNeXt101, InPlace-ABN      | 512   | 78.08 / 93.79  | 79.52 / 94.66  | 79.38 / 94.67 |
+| ResNeXt152, InPlace-ABN      | 256   | 78.28 / 94.04  | 79.73 / 94.82  | 79.56 / 94.67 |
+| WideResNet38, InPlace-ABN    | 256   | 79.72 / 94.78  | 81.03 / 95.43  | 80.69 / 95.27 |
+| ResNeXt101, InPlace-ABN sync | 256   | 77.70 / 93.78  | 79.18 / 94.60  | 78.98 / 94.56 |
+
 ### Data preparation
 
 Our scripts uses [torchvision.datasets.ImageFolder](http://pytorch.org/docs/master/torchvision/datasets.html#torchvision.datasets.ImageFolder)
