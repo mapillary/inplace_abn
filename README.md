@@ -16,19 +16,19 @@ training scripts to reproduce the ImageNet classification results reported in ou
 
 ## Overview
 
-![InPlace-ABN forward and backward computation](inplace_abn.png | width=500)
+![InPlace-ABN forward and backward computation](inplace_abn.png | width=70%)
 
 TODO: method summary
 
 ## Installation
 
-Note our code has only been tested under Linux with CUDA 8.0 / 9.0 and CUDNN 7.0. 
+Our code has only been tested under Linux with CUDA 8.0 / 9.0 and CUDNN 7.0.
 
 ### Requirements
 
 To install PyTorch, please refer to https://github.com/pytorch/pytorch#installation.
 
-**NOTE: due to currently unresolved bugs in PyTorch master, our code _requires_ PyTorch v0.2**.
+**NOTE: due to unresolved conflicts with PyTorch master, our code _requires_ PyTorch v0.2**.
 
 For all other dependencies, just run:
 ```bash
@@ -43,8 +43,58 @@ cd modules
 sh build.sh
 python build.py
 ``` 
-This assumes that the `nvcc` compiler is available in the current `PATH`.
+The `build.sh` script assumes that the `nvcc` compiler is available in the current system search path.
+The CUDA kernels are compiled for `sm_50`, `sm_52` and `sm_61` by default.
+To change this (_e.g._ if you are using a Kepler GPU), please edit the `CUDA_GENCODE` variable in `build.sh`.
 
 ## Training on ImageNet
 
-TODO: ImageNet training scripts instructions
+### Data preparation
+
+Our scripts uses [torchvision.datasets.ImageFolder](http://pytorch.org/docs/master/torchvision/datasets.html#torchvision.datasets.ImageFolder)
+for loading ImageNet data, which expects folders organized as follows:
+```
+root/train/[class_id1]/xxx.{jpg,png,jpeg}
+root/train/[class_id1]/xxy.{jpg,png,jpeg}
+root/train/[class_id2]/xxz.{jpg,png,jpeg}
+...
+
+root/val/[class_id1]/asdas.{jpg,png,jpeg}
+root/val/[class_id1]/123456.{jpg,png,jpeg}
+root/val/[class_id2]/__32_.{jpg,png,jpeg}
+...
+```
+Images can have any name, as long as the extension is that of a recognized image format.
+Class ids are also free-form, but they are expected to match between train and validation data.
+Note that the training data in the standard ImageNet distribution is already given in the required format, while
+validation images need to be split into class sub-folders as described above.  
+
+### Training
+
+The main training script is `train_imagenet.py`: this supports training on ImageNet, or any other dataset formatted
+as described above, while keeping a log of relevant metrics in Tensorboard format and periodically saving snapshots.
+Most training parameters can be specified as a `json`-formatted configuration file (look [here](imagenet/config.py)
+for a complete list of configurable parameters).
+All parameters not explicitly specified in the configuration file are set to their defaults, also available in
+[imagenet/config.py](imagenet/config.py).
+
+Our arXiv results can be reproduced by running `train_imagenet.py` with the configuration files in `./experiments`.
+As an example, the command to train `ResNeXt101` with InPlace-ABN, Leaky ReLU and `batch_size = 512` is:
+```bash
+python train_imagenet.py --log_dir /path/to/tensorboard/logs experiments/resnext101_ipabn_lr_512.json /path/to/imagenet/root
+```
+
+### Validation
+
+Validation is run by `train_imagenet.py` at the end of every training epoch.
+To validate a trained model, you can use the `test_imagenet.py` script, which allows for 10-crops validation and
+transferring weights across compatible networks (_e.g._ from `ResNeXt101` with ReLU to `ResNeXt101` with Leaky
+ReLU).
+This script accepts the same configuration files as `train_imagenet.py`, but note that the `scale_val` and `crop_val`
+parameters are ignored in favour of the `--scale` and `--crop` command-line arguments.
+
+As an example, to validate the `ResNeXt101` trained above using 10-crops of size `224` from images scaled to `256`
+pixels, you can run:
+```bash
+python test_imagenet.py --crop 224 --scale 256 --ten_crops experiments/resnext101_ipabn_lr_512.json /path/to/checkpoint /path/to/imagenet/root
+```
