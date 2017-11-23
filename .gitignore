@@ -59,7 +59,6 @@ tracker
 __pycache__
 *.pkl
 *.params
-*.json
 *.d
 build
 data
