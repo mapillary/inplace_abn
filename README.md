@@ -16,7 +16,7 @@ training scripts to reproduce the ImageNet classification results reported in ou
 
 ## Overview
 
-![InPlace-ABN forward and backward computation](inplace_abn.png | width=70%)
+<p align="center"><img width="70%" src="inplace_abn.png" /></p>
 
 TODO: method summary
 
