@@ -109,7 +109,7 @@ class InPlaceABN(autograd.Function):
         dz = dz.contiguous()
 
         # Undo activation
-        _act_backward(ctx, z, dz, weight, bias)
+        _act_backward(ctx, z, dz)
 
         if ctx.needs_input_grad[0]:
             dx = dz.new().resize_as_(dz)
@@ -227,7 +227,7 @@ class InPlaceABNSync(autograd.Function):
         dz = dz.contiguous()
 
         # Undo activation
-        _act_backward(ctx, z, dz, weight, bias)
+        _act_backward(ctx, z, dz)
 
         if ctx.needs_input_grad[0]:
             dx = dz.new().resize_as_(dz)
