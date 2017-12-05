@@ -1,3 +1,7 @@
+#include <thrust/device_ptr.h>
+#include <thrust/transform.h>
+#include <thrust/execution_policy.h>
+
 #include "common.h"
 #include "bn.h"
 
@@ -283,6 +287,83 @@ extern "C" int _bn_backward_cuda(int N, int C, int S, const float *dz, const flo
   dim3 threads(getNumThreads(S));
   backward_kernel<<<blocks, threads, 0, stream>>>(dz, z, var, weight, bias, edz, eydz, dx, dweight, dbias,
                                                   eps, N, C, S);
+
+  // Check for errors
+  cudaError_t err = cudaGetLastError();
+  if (err != cudaSuccess)
+    return 0;
+  else
+    return 1;
+}
+
+extern "C" int _leaky_relu_cuda(int N, float *x, float slope, cudaStream_t stream) {
+  // Run using thrust
+  thrust::device_ptr<float> th_x = thrust::device_pointer_cast(x);
+  thrust::transform_if(thrust::cuda::par.on(stream), th_x, th_x + N, th_x,
+                       [slope] __device__ (const float& x) { return x * slope; },
+                       [] __device__ (const float& x) { return x < 0; });
+
+  // Check for errors
+  cudaError_t err = cudaGetLastError();
+  if (err != cudaSuccess)
+    return 0;
+  else
+    return 1;
+}
+
+extern "C" int _leaky_relu_backward_cuda(int N, const float *x, float *dx, float slope, cudaStream_t stream) {
+  // Run using thrust
+  thrust::device_ptr<const float> th_x = thrust::device_pointer_cast(x);
+  thrust::device_ptr<float> th_dx = thrust::device_pointer_cast(dx);
+  thrust::transform_if(thrust::cuda::par.on(stream), th_dx, th_dx + N, th_x, th_dx,
+                       [slope] __device__ (const float& dx) { return dx * slope; },
+                       [] __device__ (const float& x) { return x < 0; });
+
+  // Check for errors
+  cudaError_t err = cudaGetLastError();
+  if (err != cudaSuccess)
+    return 0;
+  else
+    return 1;
+}
+
+extern "C" int _elu_cuda(int N, float *x, cudaStream_t stream) {
+  // Run using thrust
+  thrust::device_ptr<float> th_x = thrust::device_pointer_cast(x);
+  thrust::transform_if(thrust::cuda::par.on(stream), th_x, th_x + N, th_x,
+                       [] __device__ (const float& x) { return exp(x) - 1.f; },
+                       [] __device__ (const float& x) { return x < 0; });
+
+  // Check for errors
+  cudaError_t err = cudaGetLastError();
+  if (err != cudaSuccess)
+    return 0;
+  else
+    return 1;
+}
+
+extern "C" int _elu_backward_cuda(int N, const float *x, float *dx, cudaStream_t stream) {
+  // Run using thrust
+  thrust::device_ptr<const float> th_x = thrust::device_pointer_cast(x);
+  thrust::device_ptr<float> th_dx = thrust::device_pointer_cast(dx);
+  thrust::transform_if(thrust::cuda::par.on(stream), th_dx, th_dx + N, th_x, th_x, th_dx,
+                       [] __device__ (const float& dx, const float& x) { return dx * (x + 1.f); },
+                       [] __device__ (const float& x) { return x < 0; });
+
+  // Check for errors
+  cudaError_t err = cudaGetLastError();
+  if (err != cudaSuccess)
+    return 0;
+  else
+    return 1;
+}
+
+extern "C" int _elu_inv_cuda(int N, float *x, cudaStream_t stream) {
+  // Run using thrust
+  thrust::device_ptr<float> th_x = thrust::device_pointer_cast(x);
+  thrust::transform_if(thrust::cuda::par.on(stream), th_x, th_x + N, th_x,
+                       [] __device__ (const float& x) { return log1p(x); },
+                       [] __device__ (const float& x) { return x < 0; });
 
   // Check for errors
   cudaError_t err = cudaGetLastError();

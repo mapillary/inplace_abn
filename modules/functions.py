@@ -1,11 +1,8 @@
-import torch
 import torch.autograd as autograd
 import torch.cuda.comm as comm
 from torch.autograd.function import once_differentiable
 
 from . import _ext
-
-backend = torch._thnn.type2backend["torch.cuda.FloatTensor"]
 
 # Activation names
 ACT_LEAKY_RELU = "leaky_relu"
@@ -41,21 +38,20 @@ def _count_samples(x):
 
 def _act_forward(ctx, x):
     if ctx.activation == ACT_LEAKY_RELU:
-        backend.LeakyReLU_updateOutput(backend.library_state, x, x, ctx.slope, True)
+        _ext.leaky_relu_forward_cuda(x, ctx.slope)
     elif ctx.activation == ACT_ELU:
-        backend.ELU_updateOutput(backend.library_state, x, x, 1.0, True)
+        _ext.elu_forward_cuda(x)
     elif ctx.activation == ACT_NONE:
         pass
 
 
-def _act_backward(ctx, x, dx, weight, bias):
+def _act_backward(ctx, x, dx):
     if ctx.activation == ACT_LEAKY_RELU:
-        backend.LeakyReLU_updateGradInput(backend.library_state, x, dx, dx, ctx.slope, True)
-        backend.LeakyReLU_updateOutput(backend.library_state, x, x, 1. / ctx.slope, True)
+        _ext.leaky_relu_backward_cuda(x, dx, ctx.slope)
+        _ext.leaky_relu_forward_cuda(x, 1. / ctx.slope)
     elif ctx.activation == ACT_ELU:
-        mask = x <= 0
-        dx[mask] *= x[mask] + 1
-        x[mask] = torch.log1p(x[mask])
+        _ext.elu_backward_cuda(x, dx)
+        _ext.elu_inv_cuda(x)
     elif ctx.activation == ACT_NONE:
         pass
 

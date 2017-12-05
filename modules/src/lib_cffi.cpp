@@ -12,6 +12,11 @@ int _bn_edz_eydz_cuda(int N, int C, int S, const float *z, const float *dz, cons
 int _bn_backward_cuda(int N, int C, int S, const float *dz, const float *z, const float *var, const float *weight,
                       const float *bias, const float *edz, const float *eydz, float *dx, float *dweight, float *dbias,
                       float eps, cudaStream_t stream);
+int _leaky_relu_cuda(int N, float *x, float slope, cudaStream_t stream);
+int _leaky_relu_backward_cuda(int N, const float *x, float *dx, float slope, cudaStream_t stream);
+int _elu_cuda(int N, float *x, cudaStream_t stream);
+int _elu_backward_cuda(int N, const float *x, float *dx, cudaStream_t stream);
+int _elu_inv_cuda(int N, float *x, cudaStream_t stream);
 }
 
 extern THCState *state;
@@ -103,4 +108,61 @@ extern "C" int bn_backard_cuda(const THCudaTensor *dz, const THCudaTensor *z, co
 
   return _bn_backward_cuda(N, C, S, dz_data, z_data, var_data, weight_data, bias_data, edz_data, eydz_data, dx_data,
                            dweight_data, dbias_data, eps, stream);
+}
+
+extern "C" int leaky_relu_cuda(THCudaTensor *x, float slope) {
+  cudaStream_t stream = THCState_getCurrentStream(state);
+
+  int N = THCudaTensor_nElement(state, x);
+
+  // Get pointers
+  float *x_data = THCudaTensor_data(state, x);
+
+  return _leaky_relu_cuda(N, x_data, slope, stream);
+}
+
+extern "C" int leaky_relu_backward_cuda(const THCudaTensor *x, THCudaTensor *dx, float slope) {
+  cudaStream_t stream = THCState_getCurrentStream(state);
+
+  int N = THCudaTensor_nElement(state, x);
+
+  // Get pointers
+  const float *x_data = THCudaTensor_data(state, x);
+  float *dx_data = THCudaTensor_data(state, dx);
+
+  return _leaky_relu_backward_cuda(N, x_data, dx_data, slope, stream);
+}
+
+extern "C" int elu_cuda(THCudaTensor *x) {
+  cudaStream_t stream = THCState_getCurrentStream(state);
+
+  int N = THCudaTensor_nElement(state, x);
+
+  // Get pointers
+  float *x_data = THCudaTensor_data(state, x);
+
+  return _elu_cuda(N, x_data, stream);
+}
+
+extern "C" int elu_backward_cuda(const THCudaTensor *x, THCudaTensor *dx) {
+  cudaStream_t stream = THCState_getCurrentStream(state);
+
+  int N = THCudaTensor_nElement(state, x);
+
+  // Get pointers
+  const float *x_data = THCudaTensor_data(state, x);
+  float *dx_data = THCudaTensor_data(state, dx);
+
+  return _elu_backward_cuda(N, x_data, dx_data, stream);
+}
+
+extern "C" int elu_inv_cuda(THCudaTensor *x) {
+  cudaStream_t stream = THCState_getCurrentStream(state);
+
+  int N = THCudaTensor_nElement(state, x);
+
+  // Get pointers
+  float *x_data = THCudaTensor_data(state, x);
+
+  return _elu_inv_cuda(N, x_data, stream);
 }

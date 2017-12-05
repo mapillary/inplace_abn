@@ -8,3 +8,8 @@ int bn_backard_cuda(const THCudaTensor *dz, const THCudaTensor *z, const THCudaT
                     const THCudaTensor *weight, const THCudaTensor *bias, const THCudaTensor *edz,
                     const THCudaTensor *eydz, THCudaTensor *dx, THCudaTensor *dweight, THCudaTensor *dbias,
                     float eps);
+int leaky_relu_cuda(THCudaTensor *x, float slope);
+int leaky_relu_backward_cuda(const THCudaTensor *x, THCudaTensor *dx, float slope);
+int elu_cuda(THCudaTensor *x);
+int elu_backward_cuda(const THCudaTensor *x, THCudaTensor *dx);
+int elu_inv_cuda(THCudaTensor *x);

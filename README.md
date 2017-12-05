@@ -97,7 +97,7 @@ All parameters not explicitly specified in the configuration file are set to the
 Our arXiv results can be reproduced by running `train_imagenet.py` with the configuration files in `./experiments`.
 As an example, the command to train `ResNeXt101` with InPlace-ABN, Leaky ReLU and `batch_size = 512` is:
 ```bash
-python train_imagenet.py --log_dir /path/to/tensorboard/logs experiments/resnext101_ipabn_lr_512.json /path/to/imagenet/root
+python train_imagenet.py --log-dir /path/to/tensorboard/logs experiments/resnext101_ipabn_lr_512.json /path/to/imagenet/root
 ```
 
 ### Validation
