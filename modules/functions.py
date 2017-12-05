@@ -38,9 +38,9 @@ def _count_samples(x):
 
 def _act_forward(ctx, x):
     if ctx.activation == ACT_LEAKY_RELU:
-        _ext.leaky_relu_forward_cuda(x, ctx.slope)
+        _ext.leaky_relu_cuda(x, ctx.slope)
     elif ctx.activation == ACT_ELU:
-        _ext.elu_forward_cuda(x)
+        _ext.elu_cuda(x)
     elif ctx.activation == ACT_NONE:
         pass
 
@@ -48,7 +48,7 @@ def _act_forward(ctx, x):
 def _act_backward(ctx, x, dx):
     if ctx.activation == ACT_LEAKY_RELU:
         _ext.leaky_relu_backward_cuda(x, dx, ctx.slope)
-        _ext.leaky_relu_forward_cuda(x, 1. / ctx.slope)
+        _ext.leaky_relu_cuda(x, 1. / ctx.slope)
     elif ctx.activation == ACT_ELU:
         _ext.elu_backward_cuda(x, dx)
         _ext.elu_inv_cuda(x)
