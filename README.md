@@ -18,7 +18,14 @@ training scripts to reproduce the ImageNet classification results reported in ou
 
 <p align="center"><img width="70%" src="inplace_abn.png" /></p>
 
-TODO: method summary
+When processing a BN-Activation-Convolution sequence in the forward pass, most deep learning frameworks need to store
+two big buffers, _i.e._ the input `x` of BN and the input `z` of Conv.
+This is necessary because the standard implementations of the backward passes of BN and Conv depend on their inputs to
+calculate the gradients.
+Using Inplace-ABN to replace the BN-Activation sequence, we can safely discard `x`, thus saving up to 50% GPU memory at
+training time.
+To achieve this, we rewrite the backward pass of BN in terms of its output `y`, which is in turn reconstructed from `z`
+by inverting the activation function.
 
 ## Installation
 
