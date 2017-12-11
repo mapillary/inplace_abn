@@ -1,6 +1,6 @@
 # In-Place Activated BatchNorm
 
-[**In-Place Activated BatchNorm for Memory-Optimized Training of DNNs**](http://arxiv.org/abs/1234.56789)
+[**In-Place Activated BatchNorm for Memory-Optimized Training of DNNs**](https://arxiv.org/abs/1712.02616)
 
 In-Place Activated BatchNorm (InPlace-ABN) is a novel approach to reduce the memory required for training deep networks.
 It allows for up to 50% memory savings in modern architectures such as ResNet, ResNeXt and Wider ResNet by redefining
