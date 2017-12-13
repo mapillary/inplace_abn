@@ -60,9 +60,9 @@ class IdentityResidualBlock(nn.Module):
                 layers = layers[0:2] + [("dropout", dropout())] + layers[2:]
         else:
             layers = [
-                ("conv1", nn.Conv2d(in_channels, channels[0], 1, stride=1, padding=0, bias=False)),
+                ("conv1", nn.Conv2d(in_channels, channels[0], 1, stride=stride, padding=0, bias=False)),
                 ("bn2", norm_act(channels[0])),
-                ("conv2", nn.Conv2d(channels[0], channels[1], 3, stride=stride, padding=dilation, bias=False,
+                ("conv2", nn.Conv2d(channels[0], channels[1], 3, stride=1, padding=dilation, bias=False,
                                     groups=groups, dilation=dilation)),
                 ("bn3", norm_act(channels[1])),
                 ("conv3", nn.Conv2d(channels[1], channels[2], 1, stride=1, padding=0, bias=False))
