@@ -74,7 +74,7 @@ Results from our arXiv paper (top-5 / top-10):
 
 ### Data preparation
 
-Our scripts uses [torchvision.datasets.ImageFolder](http://pytorch.org/docs/master/torchvision/datasets.html#torchvision.datasets.ImageFolder)
+Our script uses [torchvision.datasets.ImageFolder](http://pytorch.org/docs/master/torchvision/datasets.html#torchvision.datasets.ImageFolder)
 for loading ImageNet data, which expects folders organized as follows:
 ```
 root/train/[class_id1]/xxx.{jpg,png,jpeg}
