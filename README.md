@@ -56,22 +56,26 @@ To change this (_e.g._ if you are using a Kepler GPU), please edit the `CUDA_GEN
 
 ## Training on ImageNet
 
-Results from our arXiv paper (top-5 / top-10):
+Here you can find the results from our arXiv paper (top-1 / top-5 scores) with corresponding, trained models and md5 checksums, respectively. The model files provided below are made available under the [license attached to ImageNet](http://www.image-net.org/download-faq). 
 
-| Network                           | Batch | 224            | 224, 10-crops  | 320           |
-|-----------------------------------|-------|----------------|----------------|---------------|
-| [ResNeXt101, Std-BN][1]           | 256   | 77.04 / 93.50  | 78.72 / 94.47  | 77.92 / 94.28 |
-| [ResNeXt101, InPlace-ABN][2]      | 512   | 78.08 / 93.79  | 79.52 / 94.66  | 79.38 / 94.67 |
-| [ResNeXt152, InPlace-ABN][3]      | 256   | 78.28 / 94.04  | 79.73 / 94.82  | 79.56 / 94.67 |
-| [WideResNet38, InPlace-ABN][4]    | 256   | 79.72 / 94.78  | 81.03 / 95.43  | 80.69 / 95.27 |
-| [ResNeXt101, InPlace-ABN sync][5] | 256   | 77.70 / 93.78  | 79.18 / 94.60  | 78.98 / 94.56 |
+| Network                           | Batch | 224            | 224, 10-crops  | 320           |       Trained models (+md5)      |
+|-----------------------------------|-------|----------------|----------------|---------------|----------------------------------|
+| [ResNeXt101, Std-BN][1]           | 256   | 77.04 / 93.50  | 78.72 / 94.47  | 77.92 / 94.28 | [`b959d9362a236212e935501a5a1d1963`][6] |
+| [ResNeXt101, InPlace-ABN][2]      | 512   | 78.08 / 93.79  | 79.52 / 94.66  | 79.38 / 94.67 | [`28d42cd3f1ab50c86a10809bdb48aa22`][7] |
+| [ResNeXt152, InPlace-ABN][3]      | 256   | 78.28 / 94.04  | 79.73 / 94.82  | 79.56 / 94.67 | [`adf521103388f044130835f64d91266a`][8] |
+| [WideResNet38, InPlace-ABN][4]    | 256   | 79.72 / 94.78  | 81.03 / 95.43  | 80.69 / 95.27 | [`0f9746bedb62d9f94c4437cfb8e6f2d8`][9] |
+| [ResNeXt101, InPlace-ABN sync][5] | 256   | 77.70 / 93.78  | 79.18 / 94.60  | 78.98 / 94.56 | [`74e9405a36691fd6503159faa8cc2e9b`][10] |
 
 [1]: experiments/resnext101_stdbn_lr_256.json
 [2]: experiments/resnext101_ipabn_lr_512.json
 [3]: experiments/resnext152_ipabn_lr_256.json
 [4]: experiments/wider_resnet38_ipabn_lr_256.json
 [5]: experiments/resnext101_ipabn-sync_lr_256.json
-
+[6]: https://drive.google.com/open?id=1Dum3_KVX_VCnoNJqsckRb-lJBPgUwG6d
+[7]: https://drive.google.com/open?id=1M0uIsdEZqkwQPnNBAgslQZXeXoVEnkqN
+[8]: https://drive.google.com/open?id=1TIZ-gMhmDoY_XIkn7uMUpOBRcNAv0XyW
+[9]: https://drive.google.com/open?id=1T1kGNg-W1gxvUTjSVRUiFI3CNwxe4Lb5
+[10]: https://drive.google.com/open?id=17ZIa9s7wXRXJacffNOEDqwbUZP2sirgf
 ### Data preparation
 
 Our script uses [torchvision.datasets.ImageFolder](http://pytorch.org/docs/master/torchvision/datasets.html#torchvision.datasets.ImageFolder)
