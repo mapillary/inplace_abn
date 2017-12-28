@@ -18,7 +18,7 @@ If you use In-Place Activated BatchNorm in your research, please cite:
 ```bibtex
 @article{bulo2017place,
   title={In-Place Activated BatchNorm for Memory-Optimized Training of DNNs},
-  author={Bul{\`o}, Samuel Rota and Porzi, Lorenzo and Kontschieder, Peter},
+  author={Rota Bul\`o, Samuel and Porzi, Lorenzo and Kontschieder, Peter},
   journal={arXiv preprint arXiv:1712.02616},
   year={2017}
 }
