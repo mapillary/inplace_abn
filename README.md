@@ -16,7 +16,7 @@ training scripts to reproduce the ImageNet classification results reported in ou
 
 If you use In-Place Activated BatchNorm in your research, please cite:
 ```bibtex
-@article{bulo2017place,
+@article{rotabulo2017place,
   title={In-Place Activated BatchNorm for Memory-Optimized Training of DNNs},
   author={Rota Bul\`o, Samuel and Porzi, Lorenzo and Kontschieder, Peter},
   journal={arXiv preprint arXiv:1712.02616},
