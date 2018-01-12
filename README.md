@@ -135,3 +135,7 @@ pixels, you can run:
 ```bash
 python test_imagenet.py --crop 224 --scale 256 --ten_crops experiments/resnext101_ipabn_lr_512.json /path/to/checkpoint /path/to/imagenet/root
 ```
+
+### Usage for Semantic Segmentation on Cityscapes and Mapillary Vistas
+
+The currently released code can only deal with image classification tasks (like ImageNet), but we have successfully used InPlace-ABN with a DeepLab3 segmentation head that was trained on top of the WideResNet38 model above. Due to InPlace-ABN, we can significantly increase the amount of input data to this model, which eventually allowed us to obtain #1 positions on [Cityscapes](https://www.cityscapes-dataset.com/benchmarks/#scene-labeling-task) and [Mapillary Vistas](https://eval-vistas.mapillary.com/featured-challenges/1/leaderboard/1) segmentation leaderboards. The training settings mostly follow the description in our [paper](https://arxiv.org/abs/1712.02616) but we strive to release code later this year.
