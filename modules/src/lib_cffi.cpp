@@ -8,7 +8,7 @@ int _bn_mean_var_cuda(int N, int C, int S, const float *x, float *mean, float *v
 int _bn_forward_cuda(int N, int C, int S, const float *x, const float *mean, const float *var, const float *weight,
                      const float *bias, float *y, float *z, float eps, cudaStream_t);
 int _bn_edz_eydz_cuda(int N, int C, int S, const float *z, const float *dz, const float *weight, const float *bias,
-                      float *edz, float *eydz, cudaStream_t stream);
+                      float *edz, float *eydz, float eps, cudaStream_t stream);
 int _bn_backward_cuda(int N, int C, int S, const float *dz, const float *z, const float *var, const float *weight,
                       const float *bias, const float *edz, const float *eydz, float *dx, float *dweight, float *dbias,
                       float eps, cudaStream_t stream);
@@ -68,7 +68,7 @@ extern "C" int bn_forward_cuda(const THCudaTensor *x, const THCudaTensor *mean, 
 }
 
 extern "C" int bn_edz_eydz_cuda(const THCudaTensor *z, const THCudaTensor *dz, const THCudaTensor *weight,
-                                const THCudaTensor *bias, THCudaTensor *edz, THCudaTensor *eydz) {
+                                const THCudaTensor *bias, THCudaTensor *edz, THCudaTensor *eydz, float eps) {
   cudaStream_t stream = THCState_getCurrentStream(state);
 
   int S, N, C;
@@ -82,7 +82,7 @@ extern "C" int bn_edz_eydz_cuda(const THCudaTensor *z, const THCudaTensor *dz, c
   float *edz_data = THCudaTensor_data(state, edz);
   float *eydz_data = THCudaTensor_data(state, eydz);
 
-  return _bn_edz_eydz_cuda(N, C, S, z_data, dz_data, weight_data, bias_data, edz_data, eydz_data, stream);
+  return _bn_edz_eydz_cuda(N, C, S, z_data, dz_data, weight_data, bias_data, edz_data, eydz_data, eps, stream);
 }
 
 extern "C" int bn_backard_cuda(const THCudaTensor *dz, const THCudaTensor *z, const THCudaTensor *var,

@@ -3,7 +3,7 @@ int bn_forward_cuda(const THCudaTensor *x, const THCudaTensor *mean, const THCud
                     const THCudaTensor *weight, const THCudaTensor *bias, THCudaTensor *y, THCudaTensor *z,
                     float eps);
 int bn_edz_eydz_cuda(const THCudaTensor *z, const THCudaTensor *dz, const THCudaTensor *weight,
-                     const THCudaTensor *bias, THCudaTensor *edz, THCudaTensor *eydz);
+                     const THCudaTensor *bias, THCudaTensor *edz, THCudaTensor *eydz, float eps);
 int bn_backard_cuda(const THCudaTensor *dz, const THCudaTensor *z, const THCudaTensor *var,
                     const THCudaTensor *weight, const THCudaTensor *bias, const THCudaTensor *edz,
                     const THCudaTensor *eydz, THCudaTensor *dx, THCudaTensor *dweight, THCudaTensor *dbias,

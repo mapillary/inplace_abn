@@ -150,7 +150,7 @@ __global__ void forward_kernel(const float *x, const float *mean,
     invStd = 1 / sqrt(_var + eps);
   }
 
-  float gamma = weight != 0 ? weight[plane] : 1.f;
+  float gamma = weight != 0 ? abs(weight[plane]) + eps : 1.f;
   float beta = bias != 0 ? bias[plane] : 0.f;
   for (int batch = 0; batch < N; ++batch) {
     for (int n = threadIdx.x; n < S; n += blockDim.x) {
@@ -165,11 +165,11 @@ __global__ void forward_kernel(const float *x, const float *mean,
 }
 
 __global__ void edz_eydz_kernel(const float *z, const float *dz, const float *weight, const float *bias,
-                                float *edz, float *eydz, int N, int C, int S) {
+                                float *edz, float *eydz, float eps, int N, int C, int S) {
   int plane = blockIdx.x;
   float norm = 1.f / (N * S);
   
-  float gamma = weight != 0 ? weight[plane] : 1.f;
+  float gamma = weight != 0 ? abs(weight[plane]) + eps : 1.f;
   float beta = bias != 0 ? bias[plane] : 0.f;
 
   Float2 res = reduce<Float2, GradOp>(GradOp(gamma, beta, z, dz, C, S), plane, N, C, S);
@@ -190,7 +190,7 @@ __global__ void backward_kernel(const float *dz, const float *z, const float *va
   float _edz = edz[plane];
   float _eydz = eydz[plane];
 
-  float gamma = weight != 0 ? weight[plane] : 1.f;
+  float gamma = weight != 0 ? abs(weight[plane]) + eps : 1.f;
   float beta = bias != 0 ? bias[plane] : 0.f;
 
   if (dx != 0) {
@@ -216,7 +216,10 @@ __global__ void backward_kernel(const float *dz, const float *z, const float *va
 
     if (dweight != 0) {
       if (threadIdx.x == 0) {
-        dweight[plane] += _eydz * norm;
+        if (weight[plane] >= 0)
+          dweight[plane] += _eydz * norm;
+        else
+          dweight[plane] -= _eydz * norm;
       }
     }
 
@@ -265,11 +268,11 @@ extern "C" int _bn_forward_cuda(int N, int C, int S, const float *x,
 }
 
 extern "C" int _bn_edz_eydz_cuda(int N, int C, int S, const float *z, const float *dz, const float *weight,
-                                    const float *bias, float *edz, float *eydz, cudaStream_t stream) {
+                                    const float *bias, float *edz, float *eydz, float eps, cudaStream_t stream) {
   // Run kernel
   dim3 blocks(C);
   dim3 threads(getNumThreads(S));
-  edz_eydz_kernel<<<blocks, threads, 0, stream>>>(z, dz, weight, bias, edz, eydz, N, C, S);
+  edz_eydz_kernel<<<blocks, threads, 0, stream>>>(z, dz, weight, bias, edz, eydz, eps, N, C, S);
 
   // Check for errors
   cudaError_t err = cudaGetLastError();

@@ -134,7 +134,7 @@ class InPlaceABN(autograd.Function):
                 z, dz,
                 weight if weight is not None else dz.new(),
                 bias if bias is not None else dz.new(),
-                edz, eydz)
+                edz, eydz, ctx.eps)
         else:
             # TODO: implement CUDA backward for inference mode
             edz = dz.new().resize_as_(running_mean).zero_()
@@ -252,7 +252,7 @@ class InPlaceABNSync(autograd.Function):
                 z, dz,
                 weight if weight is not None else dz.new(),
                 bias if bias is not None else dz.new(),
-                edz, eydz)
+                edz, eydz, ctx.eps)
 
             if ctx.is_master:
                 edzs, eydzs = [edz], [eydz]
