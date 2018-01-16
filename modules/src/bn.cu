@@ -216,9 +216,9 @@ __global__ void backward_kernel(const float *dz, const float *z, const float *va
 
     if (dweight != 0) {
       if (threadIdx.x == 0) {
-        if (weight[plane] >= 0)
+        if (weight[plane] > 0)
           dweight[plane] += _eydz * norm;
-        else
+        else if (weight[plane] < 0)
           dweight[plane] -= _eydz * norm;
       }
     }
