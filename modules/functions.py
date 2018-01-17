@@ -10,6 +10,12 @@ ACT_ELU = "elu"
 ACT_NONE = "none"
 
 
+def _check(fn, *args, **kwargs):
+    success = fn(*args, **kwargs)
+    if not success:
+        raise RuntimeError("CUDA Error encountered in {}".format(fn))
+
+
 def _broadcast_shape(x):
     out_size = []
     for i, s in enumerate(x.size()):
@@ -38,20 +44,20 @@ def _count_samples(x):
 
 def _act_forward(ctx, x):
     if ctx.activation == ACT_LEAKY_RELU:
-        _ext.leaky_relu_cuda(x, ctx.slope)
+        _check(_ext.leaky_relu_cuda, x, ctx.slope)
     elif ctx.activation == ACT_ELU:
-        _ext.elu_cuda(x)
+        _check(_ext.elu_cuda, x)
     elif ctx.activation == ACT_NONE:
         pass
 
 
 def _act_backward(ctx, x, dx):
     if ctx.activation == ACT_LEAKY_RELU:
-        _ext.leaky_relu_backward_cuda(x, dx, ctx.slope)
-        _ext.leaky_relu_cuda(x, 1. / ctx.slope)
+        _check(_ext.leaky_relu_backward_cuda, x, dx, ctx.slope)
+        _check(_ext.leaky_relu_cuda, x, 1. / ctx.slope)
     elif ctx.activation == ACT_ELU:
-        _ext.elu_backward_cuda(x, dx)
-        _ext.elu_inv_cuda(x)
+        _check(_ext.elu_backward_cuda, x, dx)
+        _check(_ext.elu_inv_cuda, x)
     elif ctx.activation == ACT_NONE:
         pass
 
@@ -78,7 +84,7 @@ class InPlaceABN(autograd.Function):
             mean = x.new().resize_as_(running_mean)
             var = x.new().resize_as_(running_var)
             _check_contiguous(x, mean, var)
-            _ext.bn_mean_var_cuda(x, mean, var)
+            _check(_ext.bn_mean_var_cuda, x, mean, var)
 
             # Update running stats
             running_mean.mul_((1 - ctx.momentum)).add_(ctx.momentum * mean)
@@ -87,11 +93,11 @@ class InPlaceABN(autograd.Function):
             mean, var = running_mean, running_var
 
         _check_contiguous(x, mean, var, weight, bias)
-        _ext.bn_forward_cuda(
-            x, mean, var,
-            weight if weight is not None else x.new(),
-            bias if bias is not None else x.new(),
-            x, x, ctx.eps)
+        _check(_ext.bn_forward_cuda,
+               x, mean, var,
+               weight if weight is not None else x.new(),
+               bias if bias is not None else x.new(),
+               x, x, ctx.eps)
 
         # Activation
         _act_forward(ctx, x)
@@ -130,26 +136,26 @@ class InPlaceABN(autograd.Function):
             edz = dz.new().resize_as_(running_mean)
             eydz = dz.new().resize_as_(running_mean)
             _check_contiguous(z, dz, weight, bias, edz, eydz)
-            _ext.bn_edz_eydz_cuda(
-                z, dz,
-                weight if weight is not None else dz.new(),
-                bias if bias is not None else dz.new(),
-                edz, eydz, ctx.eps)
+            _check(_ext.bn_edz_eydz_cuda,
+                   z, dz,
+                   weight if weight is not None else dz.new(),
+                   bias if bias is not None else dz.new(),
+                   edz, eydz, ctx.eps)
         else:
             # TODO: implement CUDA backward for inference mode
             edz = dz.new().resize_as_(running_mean).zero_()
             eydz = dz.new().resize_as_(running_mean).zero_()
 
         _check_contiguous(dz, z, ctx.var, weight, bias, edz, eydz, dx, dweight, dbias)
-        _ext.bn_backard_cuda(
-            dz, z, ctx.var,
-            weight if weight is not None else dz.new(),
-            bias if bias is not None else dz.new(),
-            edz, eydz,
-            dx if dx is not None else dz.new(),
-            dweight if dweight is not None else dz.new(),
-            dbias if dbias is not None else dz.new(),
-            ctx.eps)
+        _check(_ext.bn_backard_cuda,
+               dz, z, ctx.var,
+               weight if weight is not None else dz.new(),
+               bias if bias is not None else dz.new(),
+               edz, eydz,
+               dx if dx is not None else dz.new(),
+               dweight if dweight is not None else dz.new(),
+               dbias if dbias is not None else dz.new(),
+               ctx.eps)
 
         del ctx.var
 
@@ -174,7 +180,7 @@ class InPlaceABNSync(autograd.Function):
             mean = x.new().resize_(1, running_mean.size(0))
             var = x.new().resize_(1, running_var.size(0))
             _check_contiguous(x, mean, var)
-            _ext.bn_mean_var_cuda(x, mean, var)
+            _check(_ext.bn_mean_var_cuda, x, mean, var)
 
             if ctx.is_master:
                 means, vars = [mean], [var]
@@ -205,11 +211,11 @@ class InPlaceABNSync(autograd.Function):
             mean, var = running_mean, running_var
 
         _check_contiguous(x, mean, var, weight, bias)
-        _ext.bn_forward_cuda(
-            x, mean, var,
-            weight if weight is not None else x.new(),
-            bias if bias is not None else x.new(),
-            x, x, ctx.eps)
+        _check(_ext.bn_forward_cuda,
+               x, mean, var,
+               weight if weight is not None else x.new(),
+               bias if bias is not None else x.new(),
+               x, x, ctx.eps)
 
         # Activation
         _act_forward(ctx, x)
@@ -248,11 +254,11 @@ class InPlaceABNSync(autograd.Function):
             edz = dz.new().resize_as_(running_mean)
             eydz = dz.new().resize_as_(running_mean)
             _check_contiguous(z, dz, weight, bias, edz, eydz)
-            _ext.bn_edz_eydz_cuda(
-                z, dz,
-                weight if weight is not None else dz.new(),
-                bias if bias is not None else dz.new(),
-                edz, eydz, ctx.eps)
+            _check(_ext.bn_edz_eydz_cuda,
+                   z, dz,
+                   weight if weight is not None else dz.new(),
+                   bias if bias is not None else dz.new(),
+                   edz, eydz, ctx.eps)
 
             if ctx.is_master:
                 edzs, eydzs = [edz], [eydz]
@@ -277,15 +283,15 @@ class InPlaceABNSync(autograd.Function):
             eydz = dz.new().resize_as_(running_mean).zero_()
 
         _check_contiguous(dz, z, ctx.var, weight, bias, edz, eydz, dx, dweight, dbias)
-        _ext.bn_backard_cuda(
-            dz, z, ctx.var,
-            weight if weight is not None else dz.new(),
-            bias if bias is not None else dz.new(),
-            edz, eydz,
-            dx if dx is not None else dz.new(),
-            dweight if dweight is not None else dz.new(),
-            dbias if dbias is not None else dz.new(),
-            ctx.eps)
+        _check(_ext.bn_backard_cuda,
+               dz, z, ctx.var,
+               weight if weight is not None else dz.new(),
+               bias if bias is not None else dz.new(),
+               edz, eydz,
+               dx if dx is not None else dz.new(),
+               dweight if dweight is not None else dz.new(),
+               dbias if dbias is not None else dz.new(),
+               ctx.eps)
 
         del ctx.var
 
