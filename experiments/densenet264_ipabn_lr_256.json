@@ -1,6 +1,6 @@
 {
   "network": {
-    "arch": "resnext152",
+    "arch": "densenet264",
     "activation": "leaky_relu",
     "leaky_relu_slope": 0.01,
     "input_3x3": true,

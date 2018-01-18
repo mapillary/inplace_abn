@@ -75,17 +75,19 @@ Here you can find the results from our arXiv paper (top-1 / top-5 scores) with c
 | [ResNeXt152, InPlace-ABN][3]      | 256   | 78.28 / 94.04  | 79.73 / 94.82  | 79.56 / 94.67 | [`adf521103388f044130835f64d91266a`][8] |
 | [WideResNet38, InPlace-ABN][4]    | 256   | 79.72 / 94.78  | 81.03 / 95.43  | 80.69 / 95.27 | [`0f9746bedb62d9f94c4437cfb8e6f2d8`][9] |
 | [ResNeXt101, InPlace-ABN sync][5] | 256   | 77.70 / 93.78  | 79.18 / 94.60  | 78.98 / 94.56 | [`74e9405a36691fd6503159faa8cc2e9b`][10] |
+| [DenseNet264, InPlace-ABN][6]     | 256   | 78.57 / 94.17  | 79.72 / 94.93  | 79.49 / 94.89 | |
 
 [1]: experiments/resnext101_stdbn_lr_256.json
 [2]: experiments/resnext101_ipabn_lr_512.json
 [3]: experiments/resnext152_ipabn_lr_256.json
 [4]: experiments/wider_resnet38_ipabn_lr_256.json
 [5]: experiments/resnext101_ipabn-sync_lr_256.json
-[6]: https://drive.google.com/open?id=1Dum3_KVX_VCnoNJqsckRb-lJBPgUwG6d
-[7]: https://drive.google.com/open?id=1M0uIsdEZqkwQPnNBAgslQZXeXoVEnkqN
-[8]: https://drive.google.com/open?id=1TIZ-gMhmDoY_XIkn7uMUpOBRcNAv0XyW
-[9]: https://drive.google.com/open?id=1T1kGNg-W1gxvUTjSVRUiFI3CNwxe4Lb5
-[10]: https://drive.google.com/open?id=17ZIa9s7wXRXJacffNOEDqwbUZP2sirgf
+[6]: experiments/densenet264_ipabn_lr_256.json
+[7]: https://drive.google.com/open?id=1Dum3_KVX_VCnoNJqsckRb-lJBPgUwG6d
+[8]: https://drive.google.com/open?id=1M0uIsdEZqkwQPnNBAgslQZXeXoVEnkqN
+[9]: https://drive.google.com/open?id=1TIZ-gMhmDoY_XIkn7uMUpOBRcNAv0XyW
+[10]: https://drive.google.com/open?id=1T1kGNg-W1gxvUTjSVRUiFI3CNwxe4Lb5
+[11]: https://drive.google.com/open?id=17ZIa9s7wXRXJacffNOEDqwbUZP2sirgf
 ### Data preparation
 
 Our script uses [torchvision.datasets.ImageFolder](http://pytorch.org/docs/master/torchvision/datasets.html#torchvision.datasets.ImageFolder)
