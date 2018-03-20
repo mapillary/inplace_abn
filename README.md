@@ -45,7 +45,7 @@ Our code has only been tested under Linux with CUDA 8.0 / 9.0 and CUDNN 7.0.
 
 To install PyTorch, please refer to https://github.com/pytorch/pytorch#installation.
 
-**NOTE: due to unresolved issues with PyTorch master, our code _requires_ PyTorch v0.2 (see https://github.com/pytorch/pytorch/issues/3883)**.
+**NOTE: due to issues with PyTorch 0.3.0, our code _requires_ PyTorch v0.3.1 or newer, or PyTorch v0.2 (see https://github.com/pytorch/pytorch/issues/3883)**.
 
 For all other dependencies, just run:
 ```bash
