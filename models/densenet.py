@@ -4,8 +4,8 @@ from functools import partial
 
 import torch.nn as nn
 
-from ._util import try_index
 from modules import ABN, GlobalAvgPool2d, DenseModule
+from ._util import try_index
 
 
 class DenseNet(nn.Module):
@@ -113,5 +113,8 @@ _NETS = {
     "264": {"structure": [6, 12, 64, 48]},
 }
 
+__all__ = []
 for name, params in _NETS.items():
-    setattr(sys.modules[__name__], "net_densenet" + name, partial(DenseNet, **params))
+    net_name = "net_densenet" + name
+    setattr(sys.modules[__name__], net_name, partial(DenseNet, **params))
+    __all__.append(net_name)
