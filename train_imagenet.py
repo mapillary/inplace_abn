@@ -13,7 +13,7 @@ import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
-from tensorboard import SummaryWriter
+from tensorboardX import SummaryWriter
 
 import models
 from imagenet import config as config, utils as utils

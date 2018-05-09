@@ -4,8 +4,8 @@ from functools import partial
 
 import torch.nn as nn
 
-from ._util import try_index
 from modules import IdentityResidualBlock, ABN, GlobalAvgPool2d
+from ._util import try_index
 
 
 class ResNeXt(nn.Module):

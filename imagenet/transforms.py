@@ -4,13 +4,13 @@ import torch
 
 # Default augmentation values compatible with ImageNet data augmentation pipeline
 _DEFAULT_ALPHASTD = 0.1
-_DEFAULT_EIGVAL = torch.Tensor([0.2175, 0.0188, 0.0045])
-_DEFAULT_EIGVEC = torch.Tensor([[-0.5675, 0.7192, 0.4009], [-0.5808, -0.0045, -0.8140], [-0.5836, -0.6948, 0.4203]])
+_DEFAULT_EIGVAL = [0.2175, 0.0188, 0.0045]
+_DEFAULT_EIGVEC = [[-0.5675, 0.7192, 0.4009], [-0.5808, -0.0045, -0.8140], [-0.5836, -0.6948, 0.4203]]
 _DEFAULT_BCS = [0.4, 0.4, 0.4]
 
 
 def _grayscale(img):
-    alpha = torch.Tensor([0.299, 0.587, 0.114])
+    alpha = img.new([0.299, 0.587, 0.114])
     return (alpha.view(3, 1, 1) * img).sum(0, keepdim=True)
 
 
@@ -18,7 +18,7 @@ def _blend(img1, img2, alpha):
     return img1 * alpha + (1 - alpha) * img2
 
 
-class Lighting(object):
+class Lighting:
     def __init__(self, alphastd=_DEFAULT_ALPHASTD, eigval=_DEFAULT_EIGVAL, eigvec=_DEFAULT_EIGVEC):
         self._alphastd = alphastd
         self._eigval = eigval
@@ -28,8 +28,11 @@ class Lighting(object):
         if self._alphastd == 0.:
             return img
 
-        alpha = torch.normal(torch.zeros(3), self._alphastd)
-        rgb = (self._eigvec * alpha * self._eigval).sum(dim=1)
+        alpha = torch.normal(img.new_zeros(3), self._alphastd)
+        eigval = img.new(self._eigval)
+        eigvec = img.new(self._eigvec)
+
+        rgb = (eigvec * alpha * eigval).sum(dim=1)
         return img + rgb.view(3, 1, 1)
 
 
@@ -39,7 +42,7 @@ class Saturation(object):
 
     def __call__(self, img):
         gs = _grayscale(img)
-        alpha = torch.FloatTensor(1).uniform_(-self._var, self._var) + 1.0
+        alpha = img.new(1).uniform_(-self._var, self._var) + 1.0
         return _blend(img, gs, alpha)
 
 
@@ -48,8 +51,8 @@ class Brightness(object):
         self._var = var
 
     def __call__(self, img):
-        gs = torch.zeros(img.size())
-        alpha = torch.FloatTensor(1).uniform_(-self._var, self._var) + 1.0
+        gs = torch.zeros_like(img)
+        alpha = img.new(1).uniform_(-self._var, self._var) + 1.0
         return _blend(img, gs, alpha)
 
 
@@ -59,8 +62,8 @@ class Contrast(object):
 
     def __call__(self, img):
         gs = _grayscale(img)
-        gs = torch.FloatTensor(1, 1, 1).fill_(gs.mean())
-        alpha = torch.FloatTensor(1).uniform_(-self._var, self._var) + 1.0
+        gs = img.new_full((1, 1, 1), gs.mean())
+        alpha = img.new(1).uniform_(-self._var, self._var) + 1.0
         return _blend(img, gs, alpha)
 
 
