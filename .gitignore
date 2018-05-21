@@ -109,3 +109,7 @@ scala-package/*/*/target/
 
 # cffi generated
 _ext
+
+# setuptools
+dist/
+*.egg-info
