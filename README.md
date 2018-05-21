@@ -45,24 +45,19 @@ Our code has only been tested under Linux with CUDA 8.0 / 9.0 and CUDNN 7.0.
 
 To install PyTorch, please refer to https://github.com/pytorch/pytorch#installation.
 
-**NOTE: due to unresolved issues with PyTorch master, our code _requires_ PyTorch v0.2 (see https://github.com/pytorch/pytorch/issues/3883)**.
+**NOTE: our code _requires_ PyTorch v0.4**.
 
-For all other dependencies, just run:
+To install all dependencies using pip, just run:
 ```bash
 pip install -r requirements.txt
 ```
 
 ### Compiling
 
-Some parts of InPlace-ABN have a native CUDA implementation, which must be compiled with the following commands:
+Some parts of InPlace-ABN have a native CUDA implementation, which must be compiled with the following command:
 ```bash
-cd modules
-sh build.sh
-python build.py
-``` 
-The `build.sh` script assumes that the `nvcc` compiler is available in the current system search path.
-The CUDA kernels are compiled for `sm_50`, `sm_52` and `sm_61` by default.
-To change this (_e.g._ if you are using a Kepler GPU), please edit the `CUDA_GENCODE` variable in `build.sh`.
+python setup.py install
+```
 
 ## Training on ImageNet
 
