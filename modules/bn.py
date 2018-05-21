@@ -10,7 +10,6 @@ except ImportError:
 
 import torch
 import torch.nn as nn
-import torch.autograd as autograd
 
 from .functions import inplace_abn, inplace_abn_sync
 
@@ -74,8 +73,8 @@ class InPlaceABN(nn.Module):
         self.activation = activation
         self.slope = slope
         if self.affine:
-            self.weight = nn.Parameter(torch.Tensor(num_features))
-            self.bias = nn.Parameter(torch.Tensor(num_features))
+            self.weight = nn.Parameter(torch.ones(num_features))
+            self.bias = nn.Parameter(torch.zeros(num_features))
         else:
             self.register_parameter('weight', None)
             self.register_parameter('bias', None)
@@ -84,16 +83,15 @@ class InPlaceABN(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        self.running_mean.zero_()
-        self.running_var.fill_(1)
+        nn.init.constant_(self.running_mean, 0)
+        nn.init.constant_(self.running_var, 1)
         if self.affine:
-            self.weight.data.fill_(1)
-            self.bias.data.zero_()
+            nn.init.constant_(self.weight, 1)
+            nn.init.constant_(self.bias, 0)
 
     def forward(self, x):
-        return inplace_abn(x, self.weight, self.bias, autograd.Variable(self.running_mean),
-                           autograd.Variable(self.running_var), self.training, self.momentum, self.eps,
-                           self.activation, self.slope)
+        return inplace_abn(x, self.weight, self.bias, self.running_mean, self.running_var,
+                           self.training, self.momentum, self.eps, self.activation, self.slope)
 
     def __repr__(self):
         rep = '{name}({num_features}, eps={eps}, momentum={momentum},' \
@@ -141,8 +139,8 @@ class InPlaceABNSync(nn.Module):
         self.activation = activation
         self.slope = slope
         if self.affine:
-            self.weight = nn.Parameter(torch.Tensor(num_features))
-            self.bias = nn.Parameter(torch.Tensor(num_features))
+            self.weight = nn.Parameter(torch.ones(num_features))
+            self.bias = nn.Parameter(torch.zeros(num_features))
         else:
             self.register_parameter('weight', None)
             self.register_parameter('bias', None)
@@ -156,11 +154,11 @@ class InPlaceABNSync(nn.Module):
         self.worker_queues = [Queue(1) for _ in self.worker_ids]
 
     def reset_parameters(self):
-        self.running_mean.zero_()
-        self.running_var.fill_(1)
+        nn.init.constant_(self.running_mean, 0)
+        nn.init.constant_(self.running_var, 1)
         if self.affine:
-            self.weight.data.fill_(1)
-            self.bias.data.zero_()
+            nn.init.constant_(self.weight, 1)
+            nn.init.constant_(self.bias, 0)
 
     def forward(self, x):
         if x.get_device() == self.devices[0]:
@@ -179,9 +177,8 @@ class InPlaceABNSync(nn.Module):
                 "worker_queue": self.worker_queues[self.worker_ids.index(x.get_device())]
             }
 
-        return inplace_abn_sync(x, self.weight, self.bias, autograd.Variable(self.running_mean),
-                                autograd.Variable(self.running_var), extra, self.training, self.momentum, self.eps,
-                                self.activation, self.slope)
+        return inplace_abn_sync(x, self.weight, self.bias, self.running_mean, self.running_var,
+                                extra, self.training, self.momentum, self.eps, self.activation, self.slope)
 
     def __repr__(self):
         rep = '{name}({num_features}, eps={eps}, momentum={momentum},' \
