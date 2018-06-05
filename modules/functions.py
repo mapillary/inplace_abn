@@ -145,12 +145,12 @@ class InPlaceABNSync(autograd.Function):
             mean, var = backend.mean_var(x)
 
             if ctx.is_master:
-                means, vars = [mean], [var]
+                means, vars = [mean.unsqueeze(0)], [var.unsqueeze(0)]
                 for _ in range(ctx.master_queue.maxsize):
                     mean_w, var_w = ctx.master_queue.get()
                     ctx.master_queue.task_done()
-                    means.append(mean_w)
-                    vars.append(var_w)
+                    means.append(mean_w.unsqueeze(0))
+                    vars.append(var_w.unsqueeze(0))
 
                 means = comm.gather(means)
                 vars = comm.gather(vars)
