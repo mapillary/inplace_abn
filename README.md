@@ -39,7 +39,7 @@ by inverting the activation function.
 
 ## Installation
 
-Our code has only been tested under Linux with CUDA 8.0 / 9.0 and CUDNN 7.0.
+The latest version of our code has only been tested under Linux with CUDA 9.0 and CUDNN 7.0, and it is not compatible with CUDA 8.0 anymore.
 
 ### Requirements
 
