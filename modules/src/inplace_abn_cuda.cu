@@ -295,6 +295,20 @@ std::vector<at::Tensor> backward_cuda(at::Tensor z, at::Tensor dz, at::Tensor va
  * activations
  **************/
 
+template<typename T>
+inline void leaky_relu_backward_impl(T *z, T *dz, float slope, int64_t count) {
+  // Create thrust pointers
+  thrust::device_ptr<T> th_z = thrust::device_pointer_cast(z);
+  thrust::device_ptr<T> th_dz = thrust::device_pointer_cast(dz);
+
+  thrust::transform_if(th_dz, th_dz + count, th_z, th_dz,
+                       [slope] __device__ (const T& dz) { return dz * slope; },
+                       [] __device__ (const T& z) { return z < 0; });
+  thrust::transform_if(th_z, th_z + count, th_z,
+                       [slope] __device__ (const T& z) { return z / slope; },
+                       [] __device__ (const T& z) { return z < 0; });
+}
+
 void leaky_relu_backward_cuda(at::Tensor z, at::Tensor dz, float slope) {
   CHECK_INPUT(z);
   CHECK_INPUT(dz);
@@ -302,17 +316,22 @@ void leaky_relu_backward_cuda(at::Tensor z, at::Tensor dz, float slope) {
   int64_t count = z.numel();
 
   AT_DISPATCH_FLOATING_TYPES(z.type(), "leaky_relu_backward_cuda", ([&] {
-    // Create thrust pointers
-    thrust::device_ptr<scalar_t> th_z = thrust::device_pointer_cast(z.data<scalar_t>());
-    thrust::device_ptr<scalar_t> th_dz = thrust::device_pointer_cast(dz.data<scalar_t>());
-
-    thrust::transform_if(th_dz, th_dz + count, th_z, th_dz,
-                         [slope] __device__ (const scalar_t& dz) { return dz * slope; },
-                         [] __device__ (const scalar_t& z) { return z < 0; });
-    thrust::transform_if(th_z, th_z + count, th_z,
-                         [slope] __device__ (const scalar_t& z) { return z / slope; },
-                         [] __device__ (const scalar_t& z) { return z < 0; });
+    leaky_relu_backward_impl<scalar_t>(z.data<scalar_t>(), dz.data<scalar_t>(), slope, count);
   }));
+}
+
+template<typename T>
+inline void elu_backward_impl(T *z, T *dz, int64_t count) {
+  // Create thrust pointers
+  thrust::device_ptr<T> th_z = thrust::device_pointer_cast(z);
+  thrust::device_ptr<T> th_dz = thrust::device_pointer_cast(dz);
+
+  thrust::transform_if(th_dz, th_dz + count, th_z, th_z, th_dz,
+                       [] __device__ (const T& dz, const T& z) { return dz * (z + 1.); },
+                       [] __device__ (const T& z) { return z < 0; });
+  thrust::transform_if(th_z, th_z + count, th_z,
+                       [] __device__ (const T& z) { return log1p(z); },
+                       [] __device__ (const T& z) { return z < 0; });
 }
 
 void elu_backward_cuda(at::Tensor z, at::Tensor dz) {
@@ -322,15 +341,6 @@ void elu_backward_cuda(at::Tensor z, at::Tensor dz) {
   int64_t count = z.numel();
 
   AT_DISPATCH_FLOATING_TYPES(z.type(), "leaky_relu_backward_cuda", ([&] {
-    // Create thrust pointers
-    thrust::device_ptr<scalar_t> th_z = thrust::device_pointer_cast(z.data<scalar_t>());
-    thrust::device_ptr<scalar_t> th_dz = thrust::device_pointer_cast(dz.data<scalar_t>());
-
-    thrust::transform_if(th_dz, th_dz + count, th_z, th_z, th_dz,
-                         [] __device__ (const scalar_t& dz, const scalar_t& z) { return dz * (z + 1.); },
-                         [] __device__ (const scalar_t& z) { return z < 0; });
-    thrust::transform_if(th_z, th_z + count, th_z,
-                         [] __device__ (const scalar_t& z) { return log1p(z); },
-                         [] __device__ (const scalar_t& z) { return z < 0; });
+    elu_backward_impl<scalar_t>(z.data<scalar_t>(), dz.data<scalar_t>(), count);
   }));
 }
