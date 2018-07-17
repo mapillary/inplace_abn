@@ -16,6 +16,7 @@ _backend = load(name="inplace_abn",
                 extra_cuda_cflags=["--expt-extended-lambda"])
 
 # Activation names
+ACT_RELU = "relu"
 ACT_LEAKY_RELU = "leaky_relu"
 ACT_ELU = "elu"
 ACT_NONE = "none"
@@ -252,4 +253,4 @@ class InPlaceABNSync(autograd.Function):
 inplace_abn = InPlaceABN.apply
 inplace_abn_sync = InPlaceABNSync.apply
 
-__all__ = ["inplace_abn", "inplace_abn_sync", "ACT_LEAKY_RELU", "ACT_ELU", "ACT_NONE"]
+__all__ = ["inplace_abn", "inplace_abn_sync", "ACT_RELU", "ACT_LEAKY_RELU", "ACT_ELU", "ACT_NONE"]

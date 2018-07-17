@@ -11,36 +11,29 @@ from .transforms import ColorJitter, Lighting
 
 def _get_norm_act(network_config):
     if network_config["bn_mode"] == "standard":
-        if network_config["activation"] == "relu":
-            return partial(ABN, activation=nn.ReLU(inplace=True))
-        elif network_config["activation"] == "leaky_relu":
-            return partial(ABN, activation=nn.LeakyReLU(network_config["leaky_relu_slope"], inplace=True))
-        elif network_config["activation"] == "elu":
-            return partial(ABN, activation=nn.ELU(inplace=True))
-        else:
-            print("Standard batch normalization is only compatible with relu, leaky_relu and elu")
-            exit(1)
+        assert network_config["activation"] in ("relu", "leaky_relu", "elu", "none"), \
+            "Standard batch normalization is only compatible with relu, leaky_relu, elu and none"
+        activation_fn = partial(ABN,
+                                activation=network_config["activation"],
+                                slope=network_config["leaky_relu_slope"])
     elif network_config["bn_mode"] == "inplace":
-        if network_config["activation"] == "leaky_relu":
-            return partial(InPlaceABN, activation="leaky_relu", slope=network_config["leaky_relu_slope"])
-        elif network_config["activation"] in ["elu", "none"]:
-            return partial(InPlaceABN, activation=network_config["activation"])
-        else:
-            print("Inplace batch normalization is only compatible with leaky_relu, elu and none")
-            exit(1)
+        assert network_config["activation"] in ("leaky_relu", "elu", "none"), \
+            "Inplace batch normalization is only compatible with leaky_relu, elu and none"
+        activation_fn = partial(InPlaceABN,
+                                activation=network_config["activation"],
+                                slope=network_config["leaky_relu_slope"])
     elif network_config["bn_mode"] == "sync":
-        if network_config["activation"] == "leaky_relu":
-            return partial(InPlaceABNSync, activation="leaky_relu",
-                           slope=network_config["leaky_relu_slope"], devices=network_config["devices"])
-        elif network_config["activation"] in ["elu", "none"]:
-            return partial(InPlaceABNSync, activation=network_config["activation"],
-                           devices=network_config["devices"])
-        else:
-            print("Sync batch normalization is only compatible with leaky_relu, elu and none")
-            exit(1)
+        assert network_config["activation"] in ("leaky_relu", "elu", "none"), \
+            "Sync batch normalization is only compatible with leaky_relu, elu and none"
+        activation_fn = partial(InPlaceABNSync,
+                                activation=network_config["activation"],
+                                slope=network_config["leaky_relu_slope"],
+                                devices=network_config["devices"])
     else:
         print("Unrecognized batch normalization mode", network_config["bn_mode"])
         exit(1)
+
+    return activation_fn
 
 
 def get_model_params(network_config):

@@ -62,7 +62,9 @@ class ABN(nn.Module):
         x = functional.batch_norm(x, self.running_mean, self.running_var, self.weight, self.bias,
                                   self.training, self.momentum, self.eps)
 
-        if self.activation == ACT_LEAKY_RELU:
+        if self.activation == ACT_RELU:
+            return functional.relu(x, inplace=True)
+        elif self.activation == ACT_LEAKY_RELU:
             return functional.leaky_relu(x, negative_slope=self.slope, inplace=True)
         elif self.activation == ACT_ELU:
             return functional.elu(x, inplace=True)
