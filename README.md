@@ -37,11 +37,7 @@ training time.
 To achieve this, we rewrite the backward pass of BN in terms of its output `y`, which is in turn reconstructed from `z`
 by inverting the activation function.
 
-## Installation
-
-Our code has only been tested under Linux with CUDA 8.0 / 9.0 and CUDNN 7.0.
-
-### Requirements
+## Requirements
 
 To install PyTorch, please refer to https://github.com/pytorch/pytorch#installation.
 
@@ -52,11 +48,11 @@ To install all dependencies using pip, just run:
 pip install -r requirements.txt
 ```
 
-### Compiling
-
-Some parts of InPlace-ABN have a native CUDA implementation, which must be compiled with the following command:
+Some parts of InPlace-ABN have native CUDA implementations, which are compiled using Pytorch v0.4's newly introduced
+runtime module loading system, which requires a package called `ninja`.
+This can easy be installed from most distributions' package managers, _e.g._ in Ubuntu derivatives:
 ```bash
-python setup.py install
+sudo apt-get install ninja-build
 ```
 
 ## Training on ImageNet
@@ -71,6 +67,8 @@ Here you can find the results from our arXiv paper (top-1 / top-5 scores) with c
 | [WideResNet38, InPlace-ABN][4]    | 256   | 79.72 / 94.78  | 81.03 / 95.43  | 80.69 / 95.27 | [`0f9746bedb62d9f94c4437cfb8e6f2d8`][9] |
 | [ResNeXt101, InPlace-ABN sync][5] | 256   | 77.70 / 93.78  | 79.18 / 94.60  | 78.98 / 94.56 | [`74e9405a36691fd6503159faa8cc2e9b`][10] |
 | [DenseNet264, InPlace-ABN][11]    | 256   | 78.57 / 94.17  | 79.72 / 94.93  | 79.49 / 94.89 | [`c69075248477ce4d1a24b56401f5baec`][12] |
+
+**NOTE: these models are only compatible with In-Place ABN release 0.0.1, updated models will be published shortly** 
 
 [1]: experiments/resnext101_stdbn_lr_256.json
 [2]: experiments/resnext101_ipabn_lr_512.json

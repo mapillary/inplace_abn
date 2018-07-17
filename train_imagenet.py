@@ -17,7 +17,7 @@ from tensorboardX import SummaryWriter
 
 import models
 from imagenet import config as config, utils as utils
-from modules import InPlaceABN, InPlaceABNSync
+from modules import ABN
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 parser.add_argument('config', metavar='CONFIG_FILE',
@@ -321,8 +321,7 @@ def init_weights(model):
 
             if hasattr(m, "bias") and m.bias is not None:
                 nn.init.constant(m.bias, 0.)
-        elif isinstance(m, nn.BatchNorm2d) or isinstance(m, InPlaceABN) \
-                or isinstance(m, InPlaceABNSync):
+        elif isinstance(m, nn.BatchNorm2d) or isinstance(m, ABN):
             nn.init.constant(m.weight, 1.)
             nn.init.constant(m.bias, 0.)
         elif isinstance(m, nn.Linear):

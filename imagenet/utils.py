@@ -5,7 +5,7 @@ import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
 import torchvision.transforms as transforms
 
-from modules import ABN, InPlaceABNWrapper, InPlaceABNSyncWrapper
+from modules import ABN, InPlaceABN, InPlaceABNSync
 from .transforms import ColorJitter, Lighting
 
 
@@ -22,18 +22,18 @@ def _get_norm_act(network_config):
             exit(1)
     elif network_config["bn_mode"] == "inplace":
         if network_config["activation"] == "leaky_relu":
-            return partial(InPlaceABNWrapper, activation="leaky_relu", slope=network_config["leaky_relu_slope"])
+            return partial(InPlaceABN, activation="leaky_relu", slope=network_config["leaky_relu_slope"])
         elif network_config["activation"] in ["elu", "none"]:
-            return partial(InPlaceABNWrapper, activation=network_config["activation"])
+            return partial(InPlaceABN, activation=network_config["activation"])
         else:
             print("Inplace batch normalization is only compatible with leaky_relu, elu and none")
             exit(1)
     elif network_config["bn_mode"] == "sync":
         if network_config["activation"] == "leaky_relu":
-            return partial(InPlaceABNSyncWrapper, activation="leaky_relu",
+            return partial(InPlaceABNSync, activation="leaky_relu",
                            slope=network_config["leaky_relu_slope"], devices=network_config["devices"])
         elif network_config["activation"] in ["elu", "none"]:
-            return partial(InPlaceABNSyncWrapper, activation=network_config["activation"],
+            return partial(InPlaceABNSync, activation=network_config["activation"],
                            devices=network_config["devices"])
         else:
             print("Sync batch normalization is only compatible with leaky_relu, elu and none")

@@ -1,7 +1,20 @@
-import inplace_abn as backend
+from os import path
+
 import torch.autograd as autograd
 import torch.cuda.comm as comm
 from torch.autograd.function import once_differentiable
+from torch.utils.cpp_extension import load
+
+_src_path = path.join(path.dirname(path.abspath(__file__)), "src")
+_backend = load(name="inplace_abn",
+                extra_cflags=["-O3"],
+                sources=[path.join(_src_path, f) for f in [
+                    "inplace_abn.cpp",
+                    "inplace_abn_cpu.cpp",
+                    "inplace_abn_cuda.cu",
+                    "inplace_abn_cuda_half.cu"
+                ]],
+                extra_cuda_cflags=["--expt-extended-lambda"])
 
 # Activation names
 ACT_LEAKY_RELU = "leaky_relu"
@@ -43,18 +56,18 @@ def _count_samples(x):
 
 def _act_forward(ctx, x):
     if ctx.activation == ACT_LEAKY_RELU:
-        backend.leaky_relu_forward(x, ctx.slope)
+        _backend.leaky_relu_forward(x, ctx.slope)
     elif ctx.activation == ACT_ELU:
-        backend.elu_forward(x)
+        _backend.elu_forward(x)
     elif ctx.activation == ACT_NONE:
         pass
 
 
 def _act_backward(ctx, x, dx):
     if ctx.activation == ACT_LEAKY_RELU:
-        backend.leaky_relu_backward(x, dx, ctx.slope)
+        _backend.leaky_relu_backward(x, dx, ctx.slope)
     elif ctx.activation == ACT_ELU:
-        backend.elu_backward(x, dx)
+        _backend.elu_backward(x, dx)
     elif ctx.activation == ACT_NONE:
         pass
 
@@ -78,7 +91,7 @@ class InPlaceABN(autograd.Function):
         bias = bias.contiguous() if ctx.affine else x.new_empty(0)
 
         if ctx.training:
-            mean, var = backend.mean_var(x)
+            mean, var = _backend.mean_var(x)
 
             # Update running stats
             running_mean.mul_((1 - ctx.momentum)).add_(ctx.momentum * mean)
@@ -91,7 +104,7 @@ class InPlaceABN(autograd.Function):
             ctx.mark_dirty(x)
 
         # BN forward + activation
-        backend.forward(x, mean, var, weight, bias, ctx.affine, ctx.eps)
+        _backend.forward(x, mean, var, weight, bias, ctx.affine, ctx.eps)
         _act_forward(ctx, x)
 
         # Output
@@ -109,13 +122,13 @@ class InPlaceABN(autograd.Function):
         _act_backward(ctx, z, dz)
 
         if ctx.training:
-            edz, eydz = backend.edz_eydz(z, dz, weight, bias, ctx.affine, ctx.eps)
+            edz, eydz = _backend.edz_eydz(z, dz, weight, bias, ctx.affine, ctx.eps)
         else:
             # TODO: implement simplified CUDA backward for inference mode
             edz = dz.new_zeros(dz.size(1))
             eydz = dz.new_zeros(dz.size(1))
 
-        dx, dweight, dbias = backend.backward(z, dz, var, weight, bias, edz, eydz, ctx.affine, ctx.eps)
+        dx, dweight, dbias = _backend.backward(z, dz, var, weight, bias, edz, eydz, ctx.affine, ctx.eps)
         dweight = dweight if ctx.affine else None
         dbias = dbias if ctx.affine else None
 
@@ -142,7 +155,7 @@ class InPlaceABNSync(autograd.Function):
         bias = bias.contiguous() if ctx.affine else x.new_empty(0)
 
         if ctx.training:
-            mean, var = backend.mean_var(x)
+            mean, var = _backend.mean_var(x)
 
             if ctx.is_master:
                 means, vars = [mean.unsqueeze(0)], [var.unsqueeze(0)]
@@ -177,7 +190,7 @@ class InPlaceABNSync(autograd.Function):
             ctx.mark_dirty(x)
 
         # BN forward + activation
-        backend.forward(x, mean, var, weight, bias, ctx.affine, ctx.eps)
+        _backend.forward(x, mean, var, weight, bias, ctx.affine, ctx.eps)
         _act_forward(ctx, x)
 
         # Output
@@ -195,7 +208,7 @@ class InPlaceABNSync(autograd.Function):
         _act_backward(ctx, z, dz)
 
         if ctx.training:
-            edz, eydz = backend.edz_eydz(z, dz, weight, bias, ctx.affine, ctx.eps)
+            edz, eydz = _backend.edz_eydz(z, dz, weight, bias, ctx.affine, ctx.eps)
 
             if ctx.is_master:
                 edzs, eydzs = [edz], [eydz]
@@ -219,7 +232,7 @@ class InPlaceABNSync(autograd.Function):
             edz = dz.new_zeros(dz.size(1))
             eydz = dz.new_zeros(dz.size(1))
 
-        dx, dweight, dbias = backend.backward(z, dz, var, weight, bias, edz, eydz, ctx.affine, ctx.eps)
+        dx, dweight, dbias = _backend.backward(z, dz, var, weight, bias, edz, eydz, ctx.affine, ctx.eps)
         dweight = dweight if ctx.affine else None
         dbias = dbias if ctx.affine else None
 
@@ -240,4 +253,4 @@ class InPlaceABNSync(autograd.Function):
 inplace_abn = InPlaceABN.apply
 inplace_abn_sync = InPlaceABNSync.apply
 
-__all__ = ["inplace_abn", "inplace_abn_sync"]
+__all__ = ["inplace_abn", "inplace_abn_sync", "ACT_LEAKY_RELU", "ACT_ELU", "ACT_NONE"]
