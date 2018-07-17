@@ -11,8 +11,7 @@ _backend = load(name="inplace_abn",
                 sources=[path.join(_src_path, f) for f in [
                     "inplace_abn.cpp",
                     "inplace_abn_cpu.cpp",
-                    "inplace_abn_cuda.cu",
-                    "inplace_abn_cuda_half.cu"
+                    "inplace_abn_cuda.cu"
                 ]],
                 extra_cuda_cflags=["--expt-extended-lambda"])
 
