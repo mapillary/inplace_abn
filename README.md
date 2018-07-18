@@ -61,27 +61,25 @@ Here you can find the results from our arXiv paper (top-1 / top-5 scores) with c
 
 | Network                           | Batch | 224            | 224, 10-crops  | 320           |       Trained models (+md5)      |
 |-----------------------------------|-------|----------------|----------------|---------------|----------------------------------|
-| [ResNeXt101, Std-BN][1]           | 256   | 77.04 / 93.50  | 78.72 / 94.47  | 77.92 / 94.28 | [`b959d9362a236212e935501a5a1d1963`][6] |
-| [ResNeXt101, InPlace-ABN][2]      | 512   | 78.08 / 93.79  | 79.52 / 94.66  | 79.38 / 94.67 | [`28d42cd3f1ab50c86a10809bdb48aa22`][7] |
-| [ResNeXt152, InPlace-ABN][3]      | 256   | 78.28 / 94.04  | 79.73 / 94.82  | 79.56 / 94.67 | [`adf521103388f044130835f64d91266a`][8] |
-| [WideResNet38, InPlace-ABN][4]    | 256   | 79.72 / 94.78  | 81.03 / 95.43  | 80.69 / 95.27 | [`0f9746bedb62d9f94c4437cfb8e6f2d8`][9] |
-| [ResNeXt101, InPlace-ABN sync][5] | 256   | 77.70 / 93.78  | 79.18 / 94.60  | 78.98 / 94.56 | [`74e9405a36691fd6503159faa8cc2e9b`][10] |
-| [DenseNet264, InPlace-ABN][11]    | 256   | 78.57 / 94.17  | 79.72 / 94.93  | 79.49 / 94.89 | [`c69075248477ce4d1a24b56401f5baec`][12] |
-
-**NOTE: these models are only compatible with In-Place ABN release 0.0.1, updated models will be published shortly** 
+| [ResNeXt101, Std-BN][1]           | 256   | 77.04 / 93.50  | 78.72 / 94.47  | 77.92 / 94.28 | [`448438885986d14db5e870b95f814f91`][6] |
+| [ResNeXt101, InPlace-ABN][2]      | 512   | 78.08 / 93.79  | 79.52 / 94.66  | 79.38 / 94.67 | [`3b7a221cbc076410eb12c8dd361b7e4e`][7] |
+| [ResNeXt152, InPlace-ABN][3]      | 256   | 78.28 / 94.04  | 79.73 / 94.82  | 79.56 / 94.67 | [`2c8d572587961ed74611d534c5b2e9ce`][8] |
+| [WideResNet38, InPlace-ABN][4]    | 256   | 79.72 / 94.78  | 81.03 / 95.43  | 80.69 / 95.27 | [`1c085ab70b789cc1d6c1594f7a761007`][9] |
+| [ResNeXt101, InPlace-ABN sync][5] | 256   | 77.70 / 93.78  | 79.18 / 94.60  | 78.98 / 94.56 | [`0a85a21847b15e5a242e17bf3b753849`][10] |
+| [DenseNet264, InPlace-ABN][11]    | 256   | 78.57 / 94.17  | 79.72 / 94.93  | 79.49 / 94.89 | [`0b413d67b725619441d0646d663865bf`][12] |
 
 [1]: experiments/resnext101_stdbn_lr_256.json
 [2]: experiments/resnext101_ipabn_lr_512.json
 [3]: experiments/resnext152_ipabn_lr_256.json
 [4]: experiments/wider_resnet38_ipabn_lr_256.json
 [5]: experiments/resnext101_ipabn-sync_lr_256.json
-[6]: https://drive.google.com/open?id=1Dum3_KVX_VCnoNJqsckRb-lJBPgUwG6d
-[7]: https://drive.google.com/open?id=1M0uIsdEZqkwQPnNBAgslQZXeXoVEnkqN
-[8]: https://drive.google.com/open?id=1TIZ-gMhmDoY_XIkn7uMUpOBRcNAv0XyW
-[9]: https://drive.google.com/open?id=1T1kGNg-W1gxvUTjSVRUiFI3CNwxe4Lb5
-[10]: https://drive.google.com/open?id=17ZIa9s7wXRXJacffNOEDqwbUZP2sirgf
+[6]: https://drive.google.com/file/d/1qT8qCSZzUHorai1EP6Liywa28ASac_G_/view
+[7]: https://drive.google.com/file/d/1rQd-NoZuCsGZ7_l_X9GO1GGiXeXHE8CT/view
+[8]: https://drive.google.com/file/d/1RmHK3tdVTVsHiyNO14bYLkMC0XUjenIn/view
+[9]: https://drive.google.com/file/d/1Y0McSz9InDSxMEcBylAbCv1gvyeaz8Ij/view
+[10]: https://drive.google.com/file/d/1v2gmUPBMDKf0wZm9r1JwCQLGAig0DdXJ/view
 [11]: experiments/densenet264_ipabn_lr_256.json
-[12]: https://drive.google.com/open?id=1NBdtCg4_mkVogehsQbNFNfCntMpw5soT
+[12]: https://drive.google.com/file/d/1J2wp59bzzEd6zttM6oMa1KgbmCL1MS0k/view
 ### Data preparation
 
 Our script uses [torchvision.datasets.ImageFolder](http://pytorch.org/docs/master/torchvision/datasets.html#torchvision.datasets.ImageFolder)
