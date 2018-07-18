@@ -147,7 +147,7 @@ We release our WideResNet38 + DeepLab3 segmentation model trained on the Mapilla
 This is the model used to reach #1 position on the MVD semantic segmentation leaderboard.
 
 | Network                       | mIOU  | Trained model (+md5)                   |
----------------------------------------------------------------------------------|
+|-------------------------------|-------|----------------------------------------|
 | [WideResNet38 + DeepLab3][13] | 53.37 | [913f78486a34aa1577a7cd295e8a33bb][14] |
 
 [13]: test_vistas.py
