@@ -145,6 +145,7 @@ The training settings mostly follow the description in our [paper](https://arxiv
 
 We release our WideResNet38 + DeepLab3 segmentation model trained on the Mapillary Vistas research set.
 This is the model used to reach #1 position on the MVD semantic segmentation leaderboard.
+The model files provided below are made available under the [license attached to ImageNet](http://www.image-net.org/download-faq).
 
 | Network                       | mIOU  | Trained model (+md5)                   |
 |-------------------------------|-------|----------------------------------------|
