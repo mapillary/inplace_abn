@@ -154,8 +154,8 @@ def main():
 
     # Create data loader
     transformation = SegmentationTransform(
-        1024,
-        (512, 1024),
+        2048,
+        (1024, 2048),
         (0.41738699, 0.45732192, 0.46886091),
         (0.25685097, 0.26509955, 0.29067996),
     )
@@ -173,7 +173,7 @@ def main():
     scales = eval(args.scales)
     with torch.no_grad():
         for batch_i, rec in enumerate(data_loader):
-            print("Testing batch [{:3d}/{:3d}]".format(batch_i, len(data_loader)))
+            print("Testing batch [{:3d}/{:3d}]".format(batch_i + 1, len(data_loader)))
 
             img = rec["img"].cuda(device, True)
             probs, preds = model(img, scales, args.flip)
