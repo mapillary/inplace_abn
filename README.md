@@ -14,6 +14,10 @@ training scripts to reproduce the ImageNet classification results reported in ou
 - [Installation](#installation)
 - [Training on ImageNet](#training-on-imagenet)
 
+**Update: Added inference code and segmentation model for Mapillary Vistas #1 leaderboard entry**
+
+We have now also released the inference code for semantic segmentation, together with the Mapillary Vistas trained model leading to [#1 position on the Mapillary Vistas Semantic Segmentation leaderboard](https://eval-vistas.mapillary.com/featured-challenges/1/leaderboard/1). More information can be found at the bottom of this page.
+
 If you use In-Place Activated BatchNorm in your research, please cite:
 ```bibtex
 @article{rotabulo2017place,
@@ -145,7 +149,7 @@ The training settings mostly follow the description in our [paper](https://arxiv
 
 We release our WideResNet38 + DeepLab3 segmentation model trained on the Mapillary Vistas research set.
 This is the model used to reach #1 position on the MVD semantic segmentation leaderboard.
-The model files provided below are made available under the [license attached to ImageNet](http://www.image-net.org/download-faq).
+The segmentation model file provided below is made available under a [CC BY-NC-SA 4.0 license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 | Network                       | mIOU  | Trained model (+md5)                   |
 |-------------------------------|-------|----------------------------------------|
