@@ -153,7 +153,7 @@ The segmentation model file provided below is made available under a [CC BY-NC-S
 
 | Network                       | mIOU  | Trained model (+md5)                   |
 |-------------------------------|-------|----------------------------------------|
-| [WideResNet38 + DeepLab3][13] | 53.37 | [913f78486a34aa1577a7cd295e8a33bb][14] |
+| [WideResNet38 + DeepLab3][13] | 53.42 | [913f78486a34aa1577a7cd295e8a33bb][14] |
 
 [13]: test_vistas.py
 [14]: https://drive.google.com/file/d/1SJJx5-LFG3J3M99TrPMU-z6ZmgWynxo-/view
@@ -166,3 +166,5 @@ python test_vistas.py /path/to/model.pth.tar /path/to/input/folder /path/to/outp
 The script will process all `.png`, `.jpg` and `.jpeg` images from the input folder and write the predictions in the
 output folder as `.png` images.
 For additional options, _e.g._ test time augmentation, please consult the script's help message.
+
+The results on the test data written above were obtained by employing only scale 1.0 + flipping . 
