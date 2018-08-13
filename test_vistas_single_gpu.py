@@ -1,12 +1,13 @@
 import argparse
+from functools import partial
+from os import path
+
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.nn.functional as functional
 from PIL import Image, ImagePalette
-from functools import partial
-from os import path
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 
@@ -152,7 +153,7 @@ def main():
     body, head, cls_state = load_snapshot(args.snapshot)
     model = SegmentationModule(body, head, 256, 65, args.fusion_mode)
     model.cls.load_state_dict(cls_state)
-    model=model.cuda().eval()
+    model = model.cuda().eval()
     print(model)
 
     # Create data loader
@@ -166,7 +167,7 @@ def main():
         dataset,
         batch_size=1,
         pin_memory=True,
-        sampler=DistributedSampler(dataset,args.world_size,args.rank),
+        sampler=DistributedSampler(dataset, args.world_size, args.rank),
         num_workers=2,
         collate_fn=segmentation_collate,
         shuffle=False
@@ -186,8 +187,8 @@ def main():
                 img_name = rec["meta"][i]["idx"]
 
                 # Save prediction
-                prob=prob.cpu()
-                pred=pred.cpu()
+                prob = prob.cpu()
+                pred = pred.cpu()
                 pred_img = get_pred_image(pred, out_size, args.output_mode == "palette")
                 pred_img.save(path.join(args.output, img_name + ".png"))
 
