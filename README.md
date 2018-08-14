@@ -167,4 +167,4 @@ The script will process all `.png`, `.jpg` and `.jpeg` images from the input fol
 output folder as `.png` images.
 For additional options, _e.g._ test time augmentation, please consult the script's help message.
 
-The results on the test data written above were obtained by employing only scale 1.0 + flipping . 
+The results on the test data written above were obtained by employing only scale 1.0 + flipping. 
