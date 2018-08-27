@@ -140,7 +140,7 @@ We have successfully used InPlace-ABN with a DeepLab3 segmentation head that was
 model above.
 Due to InPlace-ABN, we can significantly increase the amount of input data to this model, which eventually allowed us to
 obtain #1 positions on [Cityscapes](https://www.cityscapes-dataset.com/benchmarks/#scene-labeling-task),
-[Mapillary Vistas](https://eval-vistas.mapillary.com/featured-challenges/1/leaderboard/1), [AutoNue](http://cvit.iiit.ac.in/scene-understanding-challenge-2018/benchmarks.php), 
+[Mapillary Vistas](https://eval-vistas.mapillary.com/featured-challenges/1/leaderboard/1), [AutoNUE](http://cvit.iiit.ac.in/scene-understanding-challenge-2018/benchmarks.php), 
 [Kitti](http://www.cvlibs.net/datasets/kitti/eval_semseg.php?benchmark=semantics2015) and
 [ScanNet](http://dovahkiin.stanford.edu/adai/semantic_label) segmentation leaderboards.
 The training settings mostly follow the description in our [paper](https://arxiv.org/abs/1712.02616).
