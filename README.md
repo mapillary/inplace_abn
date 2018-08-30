@@ -20,11 +20,11 @@ We have now also released the inference code for semantic segmentation, together
 
 If you use In-Place Activated BatchNorm in your research, please cite:
 ```bibtex
-@article{rotabulo2017place,
+@inproceedings{rotabulo2017place,
   title={In-Place Activated BatchNorm for Memory-Optimized Training of DNNs},
   author={Rota Bul\`o, Samuel and Porzi, Lorenzo and Kontschieder, Peter},
-  journal={arXiv preprint arXiv:1712.02616},
-  year={2017}
+  booktitle={Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition},
+  year={2018}
 }
 ```
 
