@@ -109,7 +109,7 @@ class SegmentationModule(nn.Module):
 
     def _network(self, x, scale):
         if scale != 1:
-            scaled_size = [s * scale for s in x.shape[-2:]]
+            scaled_size = [round(s * scale) for s in x.shape[-2:]]
             x_up = functional.upsample(x, size=scaled_size, mode="bilinear")
         else:
             x_up = x
