@@ -96,8 +96,8 @@ std::vector<at::Tensor> mean_var_cuda(at::Tensor x) {
   get_dims(x, num, chn, sp);
 
   // Prepare output tensors
-  auto mean = at::empty(x.type(), {chn});
-  auto var = at::empty(x.type(), {chn});
+  auto mean = at::empty({chn}, x.options());
+  auto var = at::empty({chn}, x.options());
 
   // Run kernel
   dim3 blocks(chn);
@@ -199,8 +199,8 @@ std::vector<at::Tensor> edz_eydz_cuda(at::Tensor z, at::Tensor dz, at::Tensor we
   int64_t num, chn, sp;
   get_dims(z, num, chn, sp);
 
-  auto edz = at::empty(z.type(), {chn});
-  auto eydz = at::empty(z.type(), {chn});
+  auto edz = at::empty({chn}, z.options());
+  auto eydz = at::empty({chn}, z.options());
 
   // Run kernel
   dim3 blocks(chn);
