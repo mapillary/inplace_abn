@@ -14,6 +14,7 @@ import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from tensorboardX import SummaryWriter
+import logging
 
 import models
 from imagenet import config as config, utils as utils
@@ -32,11 +33,9 @@ parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
-parser.add_argument('--world-size', default=1, type=int,
-                    help='number of distributed processes')
-parser.add_argument('--dist-url', default='tcp://224.66.41.62:23456', type=str,
-                    help='url used to set up distributed training')
-parser.add_argument('--dist-backend', default='gloo', type=str,
+parser.add_argument('--local-rank', default=0, type=int,
+                    help='process rank on node')
+parser.add_argument('--dist-backend', default='nccl', type=str,
                     help='distributed backend')
 parser.add_argument('--log-dir', type=str, default='.', metavar='PATH',
                     help='output directory for Tensorboard log')
@@ -46,19 +45,37 @@ parser.add_argument('--log-hist', action='store_true',
 best_prec1 = 0
 args = None
 conf = None
+tb = None
 logger = None
 
+def init_logger(rank, log_dir):
+    global logger
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+    handler = logging.FileHandler(path.join(log_dir, 'training_{}.log'.format(rank)))
+    formatter = logging.Formatter("%(asctime)s - %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    if rank == 0:
+        handler = logging.StreamHandler()
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
 
 def main():
-    global args, best_prec1, logger, conf
+    global args, best_prec1, logger, conf, tb
     args = parser.parse_args()
 
+    torch.cuda.set_device(arg.local_rank)
+
     args.distributed = args.world_size > 1
-    logger = SummaryWriter(args.log_dir)
 
     if args.distributed:
-        dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
-                                world_size=args.world_size)
+        dist.init_process_group(backend=args.dist_backend, init_method='env://')
+
+    rank = 0 if not args.distributed else dist.get_rank()
+
+    init_logger(rank, args.log_dir)
+    tb = SummaryWriter(args.log_dir) if rank == 0 else None
 
     # Load configuration
     conf = config.load_config(args.config)
@@ -67,10 +84,8 @@ def main():
     model_params = utils.get_model_params(conf["network"])
     model = models.__dict__["net_" + conf["network"]["arch"]](**model_params)
 
-    if not args.distributed:
-        model = torch.nn.DataParallel(model).cuda()
-    else:
-        model.cuda()
+    model.cuda()
+    if args.distributed:
         model = torch.nn.parallel.DistributedDataParallel(model)
 
     # define loss function (criterion) and optimizer
@@ -80,16 +95,16 @@ def main():
     # optionally resume from a checkpoint
     if args.resume:
         if os.path.isfile(args.resume):
-            print("=> loading checkpoint '{}'".format(args.resume))
+            logger.info("=> loading checkpoint '{}'".format(args.resume))
             checkpoint = torch.load(args.resume)
             args.start_epoch = checkpoint['epoch']
             best_prec1 = checkpoint['best_prec1']
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
-            print("=> loaded checkpoint '{}' (epoch {})"
+            logger.info("=> loaded checkpoint '{}' (epoch {})"
                   .format(args.resume, checkpoint['epoch']))
         else:
-            print("=> no checkpoint found at '{}'".format(args.resume))
+            logger.warning("=> no checkpoint found at '{}'".format(args.resume))
     else:
         init_weights(model)
         args.start_epoch = 0
@@ -144,7 +159,7 @@ def main():
 
 
 def train(train_loader, model, criterion, optimizer, scheduler, epoch):
-    global logger, conf
+    global logger, conf, tb
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -171,12 +186,6 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch):
         output = model(input)
         loss = criterion(output, target)
 
-        # measure accuracy and record loss
-        prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
-        losses.update(loss.data[0], input.size(0))
-        top1.update(prec1[0], input.size(0))
-        top5.update(prec5[0], input.size(0))
-
         # compute gradient and do SGD step
         optimizer.zero_grad()
         loss.backward()
@@ -184,12 +193,27 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch):
             nn.utils.clip_grad_norm(model.parameters(), conf["optimizer"]["clip"])
         optimizer.step()
 
+        output = output.detach()
+        loss = loss.detach()
+
+        # measure accuracy and record loss
+        with torch.no_grad():
+          prec1, prec5 = accuracy_sum(output, target, topk=(1, 5))
+          count = target.new_tensor([target.shape[0]],dtype=torch.long)
+          for meter,val in (losses,loss), (top1,prec1), (top5,prec5):
+            if dist.is_initialized():
+              dist.all_reduce(val, dist.reduce_op.SUM)
+              dist.all_reduce(count, dist.reduce_op.SUM)
+            val /= count.item()
+            meter.update(val.item(), count.item())
+
+
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
 
         if i % args.print_freq == 0:
-            print('Epoch: [{0}][{1}/{2}]\t'
+            logger.info('Epoch: [{0}][{1}/{2}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
@@ -197,19 +221,20 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch):
                   'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
                 epoch, i, len(train_loader), batch_time=batch_time,
                 data_time=data_time, loss=losses, top1=top1, top5=top5))
-
-        logger.add_scalar("train/loss", losses.val, i + epoch * len(train_loader))
-        logger.add_scalar("train/lr", scheduler.get_lr()[0], i + epoch * len(train_loader))
-        logger.add_scalar("train/top1", top1.val, i + epoch * len(train_loader))
-        logger.add_scalar("train/top5", top5.val, i + epoch * len(train_loader))
-        if args.log_hist and i % 10 == 0:
+      
+        if not dist.is_initialized() or dist.get_rank() == 0:
+          tb.add_scalar("train/loss", losses.val, i + epoch * len(train_loader))
+          tb.add_scalar("train/lr", scheduler.get_lr()[0], i + epoch * len(train_loader))
+          tb.add_scalar("train/top1", top1.val, i + epoch * len(train_loader))
+          tb.add_scalar("train/top5", top5.val, i + epoch * len(train_loader))
+          if args.log_hist and i % 10 == 0:
             for name, param in model.named_parameters():
                 if name.find("fc") != -1 or name.find("bn_out") != -1:
-                    logger.add_histogram(name, param.clone().cpu().data.numpy(), i + epoch * len(train_loader))
+                    tb.add_histogram(name, param.clone().cpu().data.numpy(), i + epoch * len(train_loader))
 
 
 def validate(val_loader, model, criterion, it=None):
-    global logger
+    global logger, tb
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
@@ -228,17 +253,21 @@ def validate(val_loader, model, criterion, it=None):
             loss = criterion(output, target)
 
             # measure accuracy and record loss
-            prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
-            losses.update(loss.data[0], input.size(0))
-            top1.update(prec1[0], input.size(0))
-            top5.update(prec5[0], input.size(0))
+            prec1, prec5 = accuracy_sum(output, target, topk=(1, 5))
+            count = target.new_tensor([target.shape[0]],dtype=torch.long)
+            for meter,val in (losses,loss), (top1,prec1), (top5,prec5):
+              if dist.is_initialized():
+                dist.all_reduce(val, dist.reduce_op.SUM)
+                dist.all_reduce(count, dist.reduce_op.SUM)
+              val /= count.item()
+              meter.update(val.item(), count.item())
 
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
 
             if i % args.print_freq == 0:
-                print('Test: [{0}/{1}]\t'
+                logger.info('Test: [{0}/{1}]\t'
                       'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                       'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
                       'Prec@1 {top1.val:.3f} ({top1.avg:.3f})\t'
@@ -246,13 +275,13 @@ def validate(val_loader, model, criterion, it=None):
                     i, len(val_loader), batch_time=batch_time, loss=losses,
                     top1=top1, top5=top5))
 
-    print(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'
+    logger.info(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'
           .format(top1=top1, top5=top5))
 
-    if it is not None:
-        logger.add_scalar("val/loss", losses.avg, it)
-        logger.add_scalar("val/top1", top1.avg, it)
-        logger.add_scalar("val/top5", top5.avg, it)
+    if it is not None and (not dist.is_initialized() or dist.get_rank() == 0):
+        tb.add_scalar("val/loss", losses.avg, it)
+        tb.add_scalar("val/top1", top1.avg, it)
+        tb.add_scalar("val/top5", top5.avg, it)
 
     return top1.avg
 
@@ -282,7 +311,7 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
-def accuracy(output, target, topk=(1,)):
+def accuracy_sum(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
     maxk = max(topk)
     batch_size = target.size(0)
@@ -294,7 +323,7 @@ def accuracy(output, target, topk=(1,)):
     res = []
     for k in topk:
         correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
-        res.append(correct_k.mul_(100.0 / batch_size))
+        res.append(correct_k.mul_(100.0))
     return res
 
 
