@@ -207,10 +207,11 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch):
           loss = loss.detach()*target.shape[0]
           prec1, prec5 = accuracy_sum(output, target, topk=(1, 5))
           count = target.new_tensor([target.shape[0]],dtype=torch.long)
+          if dist.is_initialized():
+            dist.all_reduce(count, dist.reduce_op.SUM)
           for meter,val in (losses,loss), (top1,prec1), (top5,prec5):
             if dist.is_initialized():
               dist.all_reduce(val, dist.reduce_op.SUM)
-              dist.all_reduce(count, dist.reduce_op.SUM)
             val /= count.item()
             meter.update(val.item(), count.item())
 
@@ -263,10 +264,11 @@ def validate(val_loader, model, criterion, it=None):
             prec1, prec5 = accuracy_sum(output, target, topk=(1, 5))
             loss *= target.shape[0]
             count = target.new_tensor([target.shape[0]],dtype=torch.long)
+            if dist.is_initialized():
+              dist.all_reduce(count, dist.reduce_op.SUM)
             for meter,val in (losses,loss), (top1,prec1), (top5,prec5):
               if dist.is_initialized():
                 dist.all_reduce(val, dist.reduce_op.SUM)
-                dist.all_reduce(count, dist.reduce_op.SUM)
               val /= count.item()
               meter.update(val.item(), count.item())
 
