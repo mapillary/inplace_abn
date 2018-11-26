@@ -143,7 +143,7 @@ def create_transforms(input_config):
     if input_config["scale_train"] != -1:
         train_transforms.append(transforms.Scale(input_config["scale_train"]))
     train_transforms += [
-        transforms.RandomSizedCrop(input_config["crop_train"]),
+        transforms.RandomResizedCrop(input_config["crop_train"]),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor()
     ]
@@ -155,7 +155,7 @@ def create_transforms(input_config):
 
     val_transforms = []
     if input_config["scale_val"] != -1:
-        val_transforms.append(transforms.Scale(input_config["scale_val"]))
+        val_transforms.append(transforms.Resize(input_config["scale_val"]))
     val_transforms += [
         transforms.CenterCrop(input_config["crop_val"]),
         transforms.ToTensor(),

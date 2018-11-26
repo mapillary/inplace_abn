@@ -221,10 +221,10 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch):
 
         if i % args.print_freq == 0:
             logger.info('Epoch: [{0}][{1}/{2}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'Prec@1 {top1.val:.3f} ({top1.avg:.3f})\t'
+                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f}) \t'
+                  'Data {data_time.val:.3f} ({data_time.avg:.3f}) \t'
+                  'Loss {loss.val:.4f} ({loss.avg:.4f}) \t'
+                  'Prec@1 {top1.val:.3f} ({top1.avg:.3f}) \t'
                   'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
                 epoch, i, len(train_loader), batch_time=batch_time,
                 data_time=data_time, loss=losses, top1=top1, top5=top5))
@@ -275,10 +275,10 @@ def validate(val_loader, model, criterion, it=None):
             end = time.time()
 
             if i % args.print_freq == 0:
-                logger.info('Test: [{0}/{1}]\t'
-                      'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                      'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                      'Prec@1 {top1.val:.3f} ({top1.avg:.3f})\t'
+                logger.info('Test: [{0}/{1}] \t'
+                      'Time {batch_time.val:.3f} ({batch_time.avg:.3f}) \t'
+                      'Loss {loss.val:.4f} ({loss.avg:.4f}) \t'
+                      'Prec@1 {top1.val:.3f} ({top1.avg:.3f}) \t'
                       'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
                     i, len(val_loader), batch_time=batch_time, loss=losses,
                     top1=top1, top5=top5))
@@ -339,7 +339,7 @@ def init_weights(model):
     global conf
     for name, m in model.named_modules():
         if isinstance(m, nn.Conv2d):
-            init_fn = getattr(nn.init, conf["network"]["weight_init"])
+            init_fn = getattr(nn.init, conf["network"]["weight_init"]+'_')
             if conf["network"]["weight_init"].startswith("xavier") or conf["network"]["weight_init"] == "orthogonal":
                 gain = conf["network"]["weight_gain_multiplier"]
                 if conf["network"]["activation"] == "relu" or conf["network"]["activation"] == "elu":
@@ -354,13 +354,13 @@ def init_weights(model):
                     init_fn(m.weight, conf["network"]["leaky_relu_slope"])
 
             if hasattr(m, "bias") and m.bias is not None:
-                nn.init.constant(m.bias, 0.)
+                nn.init.constant_(m.bias, 0.)
         elif isinstance(m, nn.BatchNorm2d) or isinstance(m, ABN):
-            nn.init.constant(m.weight, 1.)
-            nn.init.constant(m.bias, 0.)
+            nn.init.constant_(m.weight, 1.)
+            nn.init.constant_(m.bias, 0.)
         elif isinstance(m, nn.Linear):
-            nn.init.xavier_uniform(m.weight, .1)
-            nn.init.constant(m.bias, 0.)
+            nn.init.xavier_uniform_(m.weight, .1)
+            nn.init.constant_(m.bias, 0.)
 
 
 if __name__ == '__main__':
