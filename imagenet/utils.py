@@ -28,7 +28,7 @@ def _get_norm_act(network_config):
         activation_fn = partial(InPlaceABNSync,
                                 activation=network_config["activation"],
                                 slope=network_config["leaky_relu_slope"],
-                                devices=network_config["devices"])
+                                )
     else:
         print("Unrecognized batch normalization mode", network_config["bn_mode"])
         exit(1)

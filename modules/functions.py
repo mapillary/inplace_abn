@@ -1,4 +1,5 @@
 from os import path
+import torch.distributed as dist
 
 import torch.autograd as autograd
 import torch.cuda.comm as comm

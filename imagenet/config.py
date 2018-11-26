@@ -10,8 +10,7 @@ DEFAULTS = {
         "classes": 1000,
         "dilation": 1,
         "weight_gain_multiplier": 1,  # note: this is ignored if weight_init == kaiming_*
-        "weight_init": "xavier_normal",  # supported: xavier_[normal,uniform], kaiming_[normal,uniform], orthogonal
-        "devices": [0, 1, 2, 3]  # default: 4 gpus
+        "weight_init": "xavier_normal"  # supported: xavier_[normal,uniform], kaiming_[normal,uniform], orthogonal
     },
     "optimizer": {
         "batch_size": 256,

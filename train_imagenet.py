@@ -33,7 +33,7 @@ parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
-parser.add_argument('--local-rank', default=0, type=int,
+parser.add_argument('--local_rank', default=0, type=int,
                     help='process rank on node')
 parser.add_argument('--dist-backend', default='nccl', type=str,
                     help='distributed backend')
@@ -52,7 +52,7 @@ def init_logger(rank, log_dir):
     global logger
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
-    handler = logging.FileHandler(path.join(log_dir, 'training_{}.log'.format(rank)))
+    handler = logging.FileHandler(os.path.join(log_dir, 'training_{}.log'.format(rank)))
     formatter = logging.Formatter("%(asctime)s - %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
@@ -65,17 +65,22 @@ def main():
     global args, best_prec1, logger, conf, tb
     args = parser.parse_args()
 
-    torch.cuda.set_device(arg.local_rank)
+    torch.cuda.set_device(args.local_rank)
 
-    args.distributed = args.world_size > 1
+    try:
+      distributed = int(os.environ['WORLD_SIZE']) > 1
+    except:
+      distributed = False
 
-    if args.distributed:
+
+    if distributed:
         dist.init_process_group(backend=args.dist_backend, init_method='env://')
 
-    rank = 0 if not args.distributed else dist.get_rank()
-
+    rank = 0 if not distributed else dist.get_rank()
     init_logger(rank, args.log_dir)
     tb = SummaryWriter(args.log_dir) if rank == 0 else None
+
+
 
     # Load configuration
     conf = config.load_config(args.config)
@@ -85,8 +90,9 @@ def main():
     model = models.__dict__["net_" + conf["network"]["arch"]](**model_params)
 
     model.cuda()
-    if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model)
+    if distributed:
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.local_rank],
+                                                 output_device=args.local_rank)
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda()
@@ -118,18 +124,18 @@ def main():
     train_transforms, val_transforms = utils.create_transforms(conf["input"])
     train_dataset = datasets.ImageFolder(traindir, transforms.Compose(train_transforms))
 
-    if args.distributed:
+    if distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
     else:
         train_sampler = None
 
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=conf["optimizer"]["batch_size"], shuffle=(train_sampler is None),
+        train_dataset, batch_size=conf["optimizer"]["batch_size"]//dist.get_world_size(), shuffle=(train_sampler is None),
         num_workers=args.workers, pin_memory=True, sampler=train_sampler)
 
     val_loader = torch.utils.data.DataLoader(
         datasets.ImageFolder(valdir, transforms.Compose(val_transforms)),
-        batch_size=conf["optimizer"]["batch_size"], shuffle=False,
+        batch_size=conf["optimizer"]["batch_size"]//dist.get_world_size(), shuffle=False,
         num_workers=args.workers, pin_memory=True)
 
     if args.evaluate:
@@ -137,7 +143,7 @@ def main():
         return
 
     for epoch in range(args.start_epoch, conf["optimizer"]["schedule"]["epochs"]):
-        if args.distributed:
+        if distributed:
             train_sampler.set_epoch(epoch)
 
         # train for one epoch
@@ -182,6 +188,8 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch):
 
         target = target.cuda(non_blocking=True)
 
+        input = input.cuda(non_blocking=True)
+
         # compute output
         output = model(input)
         loss = criterion(output, target)
@@ -193,11 +201,10 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch):
             nn.utils.clip_grad_norm(model.parameters(), conf["optimizer"]["clip"])
         optimizer.step()
 
-        output = output.detach()
-        loss = loss.detach()
-
         # measure accuracy and record loss
         with torch.no_grad():
+          output = output.detach()
+          loss = loss.detach()*target.shape[0]
           prec1, prec5 = accuracy_sum(output, target, topk=(1, 5))
           count = target.new_tensor([target.shape[0]],dtype=torch.long)
           for meter,val in (losses,loss), (top1,prec1), (top5,prec5):
@@ -254,6 +261,7 @@ def validate(val_loader, model, criterion, it=None):
 
             # measure accuracy and record loss
             prec1, prec5 = accuracy_sum(output, target, topk=(1, 5))
+            loss *= target.shape[0]
             count = target.new_tensor([target.shape[0]],dtype=torch.long)
             for meter,val in (losses,loss), (top1,prec1), (top5,prec5):
               if dist.is_initialized():
