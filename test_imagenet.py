@@ -32,11 +32,29 @@ parser.add_argument('--scale', '-s', metavar='N', type=int, default=256,
                     help='scale size, if -1 do not scale input')
 parser.add_argument('--ten_crops', action='store_true',
                     help='run ten-crops testing instead of center-crop testing')
+parser.add_argument('--local_rank', default=0, type=int,
+                    help='process rank on node')
+parser.add_argument('--dist-backend', default='nccl', type=str,
+                    help='distributed backend')
+
 
 args = None
 conf = None
 cudnn.benchmark = True
+logger = None
 
+def init_logger(rank, log_dir):
+    global logger
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+    handler = logging.FileHandler(os.path.join(log_dir, 'testing_{}.log'.format(rank)))
+    formatter = logging.Formatter("%(asctime)s - %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    if rank == 0:
+        handler = logging.StreamHandler()
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
 
 def get_transforms(config):
     global args
@@ -67,13 +85,30 @@ def main():
     global args, conf
     args = parser.parse_args()
 
+    torch.cuda.set_device(args.local_rank)
+
+    try:
+      distributed = int(os.environ['WORLD_SIZE']) > 1
+    except:
+      distributed = False
+
+
+    if distributed:
+        dist.init_process_group(backend=args.dist_backend, init_method='env://')
+
+    rank = 0 if not distributed else dist.get_rank()
+    init_logger(rank, args.log_dir)
+
     # Load configuration
     conf = config.load_config(args.config)
 
     # Create model
     model_params = utils.get_model_params(conf["network"])
     model = models.__dict__["net_" + conf["network"]["arch"]](**model_params)
-    model = torch.nn.DataParallel(model).cuda()
+    model.cuda()
+    if distributed:
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.local_rank],
+                                                 output_device=args.local_rank)
 
     # Resume from checkpoint
     checkpoint = torch.load(args.checkpoint)
@@ -86,14 +121,14 @@ def main():
     batch_size = conf["optimizer"]["batch_size"] if not args.ten_crops else conf["optimizer"]["batch_size"] // 10
     val_loader = torch.utils.data.DataLoader(
         datasets.ImageFolder(valdir, transforms.Compose(val_transforms)),
-        batch_size=batch_size, shuffle=False, num_workers=args.workers, pin_memory=True)
+        batch_size=batch_size//dist.get_world_size(), shuffle=False, num_workers=args.workers, pin_memory=True)
 
     criterion = nn.CrossEntropyLoss().cuda()
     validate(val_loader, model, criterion)
 
 
 def validate(val_loader, model, criterion):
-    global args
+    global args, logger
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
@@ -119,25 +154,32 @@ def validate(val_loader, model, criterion):
             loss = criterion(output, target)
 
             # measure accuracy and record loss
-            prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
-            losses.update(loss.data[0], input.size(0))
-            top1.update(prec1[0], input.size(0))
-            top5.update(prec5[0], input.size(0))
+            prec1, prec5 = accuracy_sum(output.data, target, topk=(1, 5))
 
+            loss *= target.shape[0]
+            count = target.new_tensor([target.shape[0]],dtype=torch.long)
+            if dist.is_initialized():
+              dist.all_reduce(count, dist.reduce_op.SUM)
+            for meter,val in (losses,loss), (top1,prec1), (top5,prec5):
+              if dist.is_initialized():
+                dist.all_reduce(val, dist.reduce_op.SUM)
+              val /= count.item()
+              meter.update(val.item(), count.item())
+            
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
 
             if i % args.print_freq == 0:
-                print('Test: [{0}/{1}]\t'
-                      'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                      'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                      'Prec@1 {top1.val:.3f} ({top1.avg:.3f})\t'
+                logger.info('Test: [{0}/{1}]\t'
+                      'Time {batch_time.val:.3f} ({batch_time.avg:.3f}) \t'
+                      'Loss {loss.val:.4f} ({loss.avg:.4f}) \t'
+                      'Prec@1 {top1.val:.3f} ({top1.avg:.3f}) \t'
                       'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
                     i, len(val_loader), batch_time=batch_time, loss=losses,
                     top1=top1, top5=top5))
 
-    print(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'
+    logger.info(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'
           .format(top1=top1, top5=top5))
 
     return top1.avg
@@ -162,7 +204,7 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
-def accuracy(output, target, topk=(1,)):
+def accuracy_sum(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
     maxk = max(topk)
     batch_size = target.size(0)
@@ -174,7 +216,7 @@ def accuracy(output, target, topk=(1,)):
     res = []
     for k in topk:
         correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
-        res.append(correct_k.mul_(100.0 / batch_size))
+        res.append(correct_k.mul_(100.0))
     return res
 
 

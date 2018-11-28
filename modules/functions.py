@@ -215,8 +215,8 @@ class InPlaceABNSync(autograd.Function):
             eydz = dz.new_zeros(dz.size(1))
 
         dx, dweight, dbias = _backend.backward(z, dz, var, weight, bias, edz, eydz, ctx.affine, ctx.eps)
-        dweight = dweight if ctx.affine else None
-        dbias = dbias if ctx.affine else None
+        dweight = dweight * ctx.world_size if ctx.affine else None
+        dbias = dbias * ctx.world_size if ctx.affine else None
 
         return dx, dweight, dbias, None, None, None, None, None, None, None
 
