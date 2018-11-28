@@ -14,9 +14,11 @@ training scripts to reproduce the ImageNet classification results reported in ou
 - [Installation](#installation)
 - [Training on ImageNet](#training-on-imagenet)
 
-**Update: Added inference code and segmentation model for Mapillary Vistas #1 leaderboard entry**
-
 We have now also released the inference code for semantic segmentation, together with the Mapillary Vistas trained model leading to [#1 position on the Mapillary Vistas Semantic Segmentation leaderboard](https://eval-vistas.mapillary.com/featured-challenges/1/leaderboard/1). More information can be found at the bottom of this page.
+
+**Update 28 Nov. 2018: Enabled multiprocessing and inplace ABN syncronization over multiple processes. Added compatibility with fp16**
+
+We have modified the imagenet training code and BN syncronization in order to work with multiple processes. We have also added compatibility of our Inplace ABN module with fp16.
 
 If you use In-Place Activated BatchNorm in your research, please cite:
 ```bibtex
@@ -116,7 +118,7 @@ All parameters not explicitly specified in the configuration file are set to the
 Our arXiv results can be reproduced by running `train_imagenet.py` with the configuration files in `./experiments`.
 As an example, the command to train `ResNeXt101` with InPlace-ABN, Leaky ReLU and `batch_size = 512` is:
 ```bash
-python train_imagenet.py --log-dir /path/to/tensorboard/logs experiments/resnext101_ipabn_lr_512.json /path/to/imagenet/root
+python -m torch.distributed.launch --nproc_per_node <n. GPUs per node> train_imagenet.py --log-dir /path/to/tensorboard/logs experiments/resnext101_ipabn_lr_512.json /path/to/imagenet/root
 ```
 
 ### Validation
