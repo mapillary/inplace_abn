@@ -130,9 +130,9 @@ class InPlaceABN(autograd.Function):
             edz = dz.new_zeros(dz.size(1))
             eydz = dz.new_zeros(dz.size(1))
 
-        dx, dweight, dbias = _backend.backward(z, dz, var, weight, bias, edz, eydz, ctx.affine, ctx.eps)
-        dweight = dweight if ctx.affine else None
-        dbias = dbias if ctx.affine else None
+        dx = _backend.backward(z, dz, var, weight, bias, edz, eydz, ctx.affine, ctx.eps)
+        dweight = eydz * weight.sign() if ctx.affine else None
+        dbias = edz if ctx.affine else None
 
         return dx, dweight, dbias, None, None, None, None, None, None, None
 
@@ -213,10 +213,8 @@ class InPlaceABNSync(autograd.Function):
                 dist.all_reduce(eydz, dist.reduce_op.SUM)
                 eydz /= ctx.world_size
         else:
-            edz = dz.new_zeros(dz.size(1))
-            eydz = dz.new_zeros(dz.size(1))
-            edz_local = edz.clone()
-            eydz_local = eydz.clone()
+            edz_local = edz = dz.new_zeros(dz.size(1))
+            eydz_local = eydz = dz.new_zeros(dz.size(1))
 
         dx = _backend.backward(z, dz, var, weight, bias, edz, eydz, ctx.affine, ctx.eps)
         dweight = eydz_local * weight.sign() if ctx.affine else None
