@@ -212,8 +212,7 @@ std::vector<at::Tensor> edz_eydz_cuda(at::Tensor z, at::Tensor dz, at::Tensor we
 
 template<typename T>
 __global__ void backward_kernel(const T *z, const T *dz, const T *var, const T *weight, const T *bias, const T *edz,
-                                const T *eydz, T *dx, T *dweight, T *dbias,
-                                bool affine, float eps, int num, int chn, int sp) {
+	                        const T *eydz, T *dx, bool affine, float eps, int num, int chn, int sp) {
   int plane = blockIdx.x;
 
   T _weight = affine ? abs(weight[plane]) + eps : 1.f;
@@ -233,16 +232,9 @@ __global__ void backward_kernel(const T *z, const T *dz, const T *var, const T *
       dx[(batch * chn + plane) * sp + n] = (_dz - _edz / count - _y * _eydz / count) * _mul;
     }
   }
-
-  if (threadIdx.x == 0) {
-    if (affine) {
-      dweight[plane] = weight[plane] > 0 ? _eydz : -_eydz;
-      dbias[plane] = _edz;
-    }
-  }
 }
 
-std::vector<at::Tensor> backward_cuda(at::Tensor z, at::Tensor dz, at::Tensor var, at::Tensor weight, at::Tensor bias,
+at::Tensor backward_cuda(at::Tensor z, at::Tensor dz, at::Tensor var, at::Tensor weight, at::Tensor bias,
                                       at::Tensor edz, at::Tensor eydz, bool affine, float eps) {
   CHECK_CUDA_INPUT(z);
   CHECK_CUDA_INPUT(dz);
@@ -257,8 +249,6 @@ std::vector<at::Tensor> backward_cuda(at::Tensor z, at::Tensor dz, at::Tensor va
   get_dims(z, num, chn, sp);
 
   auto dx = at::zeros_like(z);
-  auto dweight = at::zeros_like(weight);
-  auto dbias = at::zeros_like(bias);
 
   // Run kernel
   dim3 blocks(chn);
@@ -274,12 +264,10 @@ std::vector<at::Tensor> backward_cuda(at::Tensor z, at::Tensor dz, at::Tensor va
         edz.data<scalar_t>(),
         eydz.data<scalar_t>(),
         dx.data<scalar_t>(),
-        dweight.data<scalar_t>(),
-        dbias.data<scalar_t>(),
         affine, eps, num, chn, sp);
   }));
 
-  return {dx, dweight, dbias};
+  return dx;
 }
 
 /**************

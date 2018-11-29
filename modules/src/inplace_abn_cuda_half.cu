@@ -191,8 +191,7 @@ std::vector<at::Tensor> edz_eydz_cuda_h(at::Tensor z, at::Tensor dz, at::Tensor 
 }
 
 __global__ void backward_kernel_h(const half *z, const half *dz, const float *var, const float *weight, const float *bias, const float *edz,
-                                const float *eydz, half *dx, float *dweight, float *dbias,
-                                bool affine, float eps, int num, int chn, int sp) {
+                                  const float *eydz, half *dx, bool affine, float eps, int num, int chn, int sp) {
   int plane = blockIdx.x;
 
   float _weight = affine ? abs(weight[plane]) + eps : 1.f;
@@ -212,16 +211,9 @@ __global__ void backward_kernel_h(const half *z, const half *dz, const float *va
       dx[(batch * chn + plane) * sp + n] = __float2half((_dz - _edz / count - _y * _eydz / count) * _mul);
     }
   }
-
-  if (threadIdx.x == 0) {
-    if (affine) {
-      dweight[plane] = weight[plane] > 0 ? _eydz : -_eydz;
-      dbias[plane] = _edz;
-    }
-  }
 }
 
-std::vector<at::Tensor> backward_cuda_h(at::Tensor z, at::Tensor dz, at::Tensor var, at::Tensor weight, at::Tensor bias,
+at::Tensor backward_cuda_h(at::Tensor z, at::Tensor dz, at::Tensor var, at::Tensor weight, at::Tensor bias,
                                       at::Tensor edz, at::Tensor eydz, bool affine, float eps) {
   CHECK_CUDA_INPUT(z);
   CHECK_CUDA_INPUT(dz);
@@ -236,8 +228,6 @@ std::vector<at::Tensor> backward_cuda_h(at::Tensor z, at::Tensor dz, at::Tensor 
   get_dims(z, num, chn, sp);
 
   auto dx = at::zeros_like(z);
-  auto dweight = at::zeros_like(weight);
-  auto dbias = at::zeros_like(bias);
 
   // Run kernel
   dim3 blocks(chn);
@@ -252,11 +242,9 @@ std::vector<at::Tensor> backward_cuda_h(at::Tensor z, at::Tensor dz, at::Tensor 
         edz.data<float>(),
         eydz.data<float>(),
         reinterpret_cast<half*>(dx.data<at::Half>()),
-        dweight.data<float>(),
-        dbias.data<float>(),
         affine, eps, num, chn, sp);
 
-  return {dx, dweight, dbias};
+  return dx;
 }
 
 __global__ void leaky_relu_backward_impl_h(half *z, half *dz, float slope, int64_t count) {

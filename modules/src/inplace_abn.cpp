@@ -42,7 +42,7 @@ std::vector<at::Tensor> edz_eydz(at::Tensor z, at::Tensor dz, at::Tensor weight,
   }
 }
 
-std::vector<at::Tensor> backward(at::Tensor z, at::Tensor dz, at::Tensor var, at::Tensor weight, at::Tensor bias,
+at::Tensor backward(at::Tensor z, at::Tensor dz, at::Tensor var, at::Tensor weight, at::Tensor bias,
                                  at::Tensor edz, at::Tensor eydz, bool affine, float eps) {
   if (z.is_cuda()) {
     if (z.type().scalarType() == at::ScalarType::Half) {

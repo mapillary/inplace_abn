@@ -72,22 +72,14 @@ std::vector<at::Tensor> edz_eydz_cpu(at::Tensor z, at::Tensor dz, at::Tensor wei
   return {edz, eydz};
 }
 
-std::vector<at::Tensor> backward_cpu(at::Tensor z, at::Tensor dz, at::Tensor var, at::Tensor weight, at::Tensor bias,
+at::Tensor backward_cpu(at::Tensor z, at::Tensor dz, at::Tensor var, at::Tensor weight, at::Tensor bias,
                                      at::Tensor edz, at::Tensor eydz, bool affine, float eps) {
   auto y = invert_affine(z, weight, bias, affine, eps);
   auto mul = affine ? at::rsqrt(var + eps) * (at::abs(weight) + eps) : at::rsqrt(var + eps);
 
   auto num = count(z);
   auto dx = (dz - broadcast_to(edz / num, dz) - y * broadcast_to(eydz / num, dz)) * broadcast_to(mul, dz);
-
-  auto dweight = at::empty({0}, z.options());
-  auto dbias = at::empty({0}, z.options());
-  if (affine) {
-    dweight = eydz * at::sign(weight);
-    dbias = edz;
-  }
-
-  return {dx, dweight, dbias};
+  return dx;
 }
 
 void leaky_relu_backward_cpu(at::Tensor z, at::Tensor dz, float slope) {
