@@ -18,7 +18,7 @@ import logging
 
 import models
 from imagenet import config as config, utils as utils
-from modules import ABN
+from modules import ABN, SingleGPU
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 parser.add_argument('config', metavar='CONFIG_FILE',
@@ -68,9 +68,11 @@ def main():
     torch.cuda.set_device(args.local_rank)
 
     try:
-      distributed = int(os.environ['WORLD_SIZE']) > 1
+      world_size = int(os.environ['WORLD_SIZE'])
+      distributed = world_size > 1
     except:
       distributed = False
+      world_size = 1
 
 
     if distributed:
@@ -93,6 +95,8 @@ def main():
     if distributed:
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.local_rank],
                                                  output_device=args.local_rank)
+    else:
+        model = SingleGPU(model)
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda()
@@ -130,12 +134,12 @@ def main():
         train_sampler = None
 
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=conf["optimizer"]["batch_size"]//dist.get_world_size(), shuffle=(train_sampler is None),
+        train_dataset, batch_size=conf["optimizer"]["batch_size"]//world_size, shuffle=(train_sampler is None),
         num_workers=args.workers, pin_memory=True, sampler=train_sampler)
 
     val_loader = torch.utils.data.DataLoader(
         datasets.ImageFolder(valdir, transforms.Compose(val_transforms)),
-        batch_size=conf["optimizer"]["batch_size"]//dist.get_world_size(), shuffle=False,
+        batch_size=conf["optimizer"]["batch_size"], shuffle=False,
         num_workers=args.workers, pin_memory=True)
 
     if args.evaluate:
@@ -260,15 +264,15 @@ def validate(val_loader, model, criterion, it=None):
 
             # measure accuracy and record loss
             prec1, prec5 = accuracy_sum(output, target, topk=(1, 5))
-            loss *= target.shape[0]
-            count = target.new_tensor([target.shape[0]],dtype=torch.long)
-            if dist.is_initialized():
-              dist.all_reduce(count, dist.reduce_op.SUM)
+#            loss *= target.shape[0]
+#            count = target.new_tensor([target.shape[0]],dtype=torch.long)
+#            if dist.is_initialized():
+#              dist.all_reduce(count, dist.reduce_op.SUM)
             for meter,val in (losses,loss), (top1,prec1), (top5,prec5):
-              if dist.is_initialized():
-                dist.all_reduce(val, dist.reduce_op.SUM)
-              val /= count.item()
-              meter.update(val.item(), count.item())
+#              if dist.is_initialized():
+#                dist.all_reduce(val, dist.reduce_op.SUM)
+#              val /= count.item()
+              meter.update(val.item(), target.shape[0])
 
             # measure elapsed time
             batch_time.update(time.time() - end)
