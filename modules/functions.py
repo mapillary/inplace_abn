@@ -149,33 +149,35 @@ class InPlaceABNSync(autograd.Function):
         ctx.affine = weight is not None and bias is not None
 
         # Prepare inputs
-        try:
-            ctx.world_size = dist.get_world_size()
-            ctx.distributed = True
-        except AssertionError:
-            ctx.world_size = 1
-            ctx.distributed = False
+        ctx.world_size = dist.get_world_size() if dist.is_initialized() else 1
 
-        count = _count_samples(x) * ctx.world_size
+        #count = _count_samples(x)
+        batch_size = x.new_tensor([x.shape[0]].dtype=torch.float32)
+
         x = x.contiguous()
         weight = weight.contiguous() if ctx.affine else x.new_empty(0)
         bias = bias.contiguous() if ctx.affine else x.new_empty(0)
 
         if ctx.training:
             mean, var = _backend.mean_var(x)
-            if ctx.distributed:
-                mean_all = mean.clone()
+            if ctx.world_size>1:
+                # get global batch size
+                dist.all_reduce(batch_size, dist.reduce_op.SUM)
+                ctx.factor = x.shape[0]/batch_size.item()
+
+                mean_all = mean.clone() * factor
                 dist.all_reduce(mean_all, dist.reduce_op.SUM)
-                mean_all /= ctx.world_size
-                var_all = var + (mean - mean_all) ** 2
+
+                var_all = (var + (mean - mean_all) ** 2) * factor
                 dist.all_reduce(var_all, dist.reduce_op.SUM)
-                var_all /= ctx.world_size
+
                 mean = mean_all
                 var = var_all
 
             # Update running stats
             running_mean.mul_((1 - ctx.momentum)).add_(ctx.momentum * mean)
-            running_var.mul_((1 - ctx.momentum)).add_(ctx.momentum * var * count / (count - 1))
+            count = batch_size.item() * x.view(x.shape[0],x.shape[1],-1).shape[-1]
+            running_var.mul_((1 - ctx.momentum)).add_(ctx.momentum * var * (float(count) / (count - 1)))
 
             # Mark in-place modified tensors
             ctx.mark_dirty(x, running_mean, running_var)
@@ -206,12 +208,12 @@ class InPlaceABNSync(autograd.Function):
             edz_local = edz.clone()
             eydz_local = eydz.clone()
 
-            if ctx.distributed:
+            if ctx.world_size>1:
+                edz *= ctx.factor
                 dist.all_reduce(edz, dist.reduce_op.SUM)
-                edz /= ctx.world_size
 
+                eydz *= ctx.factor
                 dist.all_reduce(eydz, dist.reduce_op.SUM)
-                eydz /= ctx.world_size
         else:
             edz_local = edz = dz.new_zeros(dz.size(1))
             eydz_local = eydz = dz.new_zeros(dz.size(1))
