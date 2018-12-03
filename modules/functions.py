@@ -1,6 +1,6 @@
 from os import path
+import torch 
 import torch.distributed as dist
-
 import torch.autograd as autograd
 import torch.cuda.comm as comm
 from torch.autograd.function import once_differentiable
@@ -152,7 +152,7 @@ class InPlaceABNSync(autograd.Function):
         ctx.world_size = dist.get_world_size() if dist.is_initialized() else 1
 
         #count = _count_samples(x)
-        batch_size = x.new_tensor([x.shape[0]].dtype=torch.float32)
+        batch_size = x.new_tensor([x.shape[0]],dtype=torch.float32)
 
         x = x.contiguous()
         weight = weight.contiguous() if ctx.affine else x.new_empty(0)
@@ -165,10 +165,10 @@ class InPlaceABNSync(autograd.Function):
                 dist.all_reduce(batch_size, dist.reduce_op.SUM)
                 ctx.factor = x.shape[0]/batch_size.item()
 
-                mean_all = mean.clone() * factor
+                mean_all = mean.clone() * ctx.factor
                 dist.all_reduce(mean_all, dist.reduce_op.SUM)
 
-                var_all = (var + (mean - mean_all) ** 2) * factor
+                var_all = (var + (mean - mean_all) ** 2) * ctx.factor
                 dist.all_reduce(var_all, dist.reduce_op.SUM)
 
                 mean = mean_all
