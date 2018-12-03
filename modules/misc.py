@@ -1,5 +1,6 @@
 import torch.nn as nn
-
+import torch
+import torch.distributed as dist
 
 class GlobalAvgPool2d(nn.Module):
     def __init__(self):
@@ -17,3 +18,4 @@ class SingleGPU(nn.Module):
 
     def forward(self, input):
         return self.module(input.cuda(non_blocking=True))
+

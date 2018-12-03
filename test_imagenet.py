@@ -11,8 +11,13 @@ import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
+import torch.distributed as dist
+from functools import partial
+
 
 import models
+from modules import SingleGPU
+from dataset.sampler import TestDistributedSampler
 from imagenet import config as config, utils as utils
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Testing.')
@@ -41,20 +46,6 @@ parser.add_argument('--dist-backend', default='nccl', type=str,
 args = None
 conf = None
 cudnn.benchmark = True
-logger = None
-
-def init_logger(rank, log_dir):
-    global logger
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
-    handler = logging.FileHandler(os.path.join(log_dir, 'testing_{}.log'.format(rank)))
-    formatter = logging.Formatter("%(asctime)s - %(message)s")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    if rank == 0:
-        handler = logging.StreamHandler()
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
 
 def get_transforms(config):
     global args
@@ -88,16 +79,17 @@ def main():
     torch.cuda.set_device(args.local_rank)
 
     try:
-      distributed = int(os.environ['WORLD_SIZE']) > 1
+      world_size = int(os.environ['WORLD_SIZE'])
+      distributed = world_size > 1
     except:
       distributed = False
+      world_size = 1
 
 
     if distributed:
         dist.init_process_group(backend=args.dist_backend, init_method='env://')
 
     rank = 0 if not distributed else dist.get_rank()
-    init_logger(rank, args.log_dir)
 
     # Load configuration
     conf = config.load_config(args.config)
@@ -109,6 +101,8 @@ def main():
     if distributed:
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.local_rank],
                                                  output_device=args.local_rank)
+    else:
+        model = SingleGPU(model)
 
     # Resume from checkpoint
     checkpoint = torch.load(args.checkpoint)
@@ -119,16 +113,17 @@ def main():
     val_transforms = get_transforms(conf["input"])
 
     batch_size = conf["optimizer"]["batch_size"] if not args.ten_crops else conf["optimizer"]["batch_size"] // 10
+    dataset = datasets.ImageFolder(valdir, transforms.Compose(val_transforms))
     val_loader = torch.utils.data.DataLoader(
-        datasets.ImageFolder(valdir, transforms.Compose(val_transforms)),
-        batch_size=batch_size//dist.get_world_size(), shuffle=False, num_workers=args.workers, pin_memory=True)
+        dataset, batch_size=batch_size//world_size, shuffle=False, sampler=TestDistributedSampler(dataset),
+        num_workers=args.workers, pin_memory=True)
 
     criterion = nn.CrossEntropyLoss().cuda()
     validate(val_loader, model, criterion)
 
 
 def validate(val_loader, model, criterion):
-    global args, logger
+    global args
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
@@ -138,7 +133,13 @@ def validate(val_loader, model, criterion):
     model.eval()
 
     end = time.time()
-    for i, (input, target) in enumerate(val_loader):
+
+    rank = dist.get_rank() if dist.is_initialized() else 0
+    world_size = dist.get_world_size() if dist.is_initialized() else 1
+    do_print = rank == 0
+
+
+    def process(input, target, all_reduce=None):
         with torch.no_grad():
             if args.ten_crops:
                 bs, ncrops, c, h, w = input.size()
@@ -158,28 +159,42 @@ def validate(val_loader, model, criterion):
 
             loss *= target.shape[0]
             count = target.new_tensor([target.shape[0]],dtype=torch.long)
-            if dist.is_initialized():
-              dist.all_reduce(count, dist.reduce_op.SUM)
+            if all_reduce:
+              all_reduce(count)
             for meter,val in (losses,loss), (top1,prec1), (top5,prec5):
-              if dist.is_initialized():
-                dist.all_reduce(val, dist.reduce_op.SUM)
+              if all_reduce:
+                all_reduce(val)
               val /= count.item()
               meter.update(val.item(), count.item())
             
-            # measure elapsed time
-            batch_time.update(time.time() - end)
-            end = time.time()
 
-            if i % args.print_freq == 0:
-                logger.info('Test: [{0}/{1}]\t'
-                      'Time {batch_time.val:.3f} ({batch_time.avg:.3f}) \t'
-                      'Loss {loss.val:.4f} ({loss.avg:.4f}) \t'
-                      'Prec@1 {top1.val:.3f} ({top1.avg:.3f}) \t'
-                      'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
-                    i, len(val_loader), batch_time=batch_time, loss=losses,
-                    top1=top1, top5=top5))
 
-    logger.info(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'
+    # deal with remainder
+    all_reduce = partial(dist.all_reduce, op=dist.reduce_op.SUM) if dist.is_initialized() else None
+    last_group_size = len(val_loader.dataset) % world_size
+    for i, (input, target) in enumerate(val_loader):
+      if input.shape[0] > 1 or world_size == 1:
+        process(input, target, all_reduce)
+      else:
+        process(input, target, partial(dist.all_reduce, op=dist.reduce_op.SUM, group=dist.new_group(range(last_group_size))))
+
+      # measure elapsed time
+      batch_time.update(time.time() - end)
+      end = time.time()
+
+      if do_print and i % args.print_freq == 0:
+        print('Test: [{0}/{1}]\t'
+	      'Time {batch_time.val:.3f} ({batch_time.avg:.3f}) \t'
+	      'Loss {loss.val:.4f} ({loss.avg:.4f}) \t'
+	      'Prec@1 {top1.val:.3f} ({top1.avg:.3f}) \t'
+	      'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
+	    i, len(val_loader), batch_time=batch_time, loss=losses,
+	    top1=top1, top5=top5))
+    if rank > last_group_size > 0:
+      dist.new_group(range(last_group_size))
+
+    if do_print:
+       print(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'
           .format(top1=top1, top5=top5))
 
     return top1.avg

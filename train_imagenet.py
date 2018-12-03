@@ -19,6 +19,7 @@ import logging
 import models
 from imagenet import config as config, utils as utils
 from modules import ABN, SingleGPU
+from dataset.sampler import TestDistributedSampler
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 parser.add_argument('config', metavar='CONFIG_FILE',
@@ -137,10 +138,10 @@ def main():
         train_dataset, batch_size=conf["optimizer"]["batch_size"]//world_size, shuffle=(train_sampler is None),
         num_workers=args.workers, pin_memory=True, sampler=train_sampler)
 
+    val_dataset = datasets.ImageFolder(valdir, transforms.Compose(val_transforms))
     val_loader = torch.utils.data.DataLoader(
-        datasets.ImageFolder(valdir, transforms.Compose(val_transforms)),
-        batch_size=conf["optimizer"]["batch_size"], shuffle=False,
-        num_workers=args.workers, pin_memory=True)
+        val_dataset, batch_size=conf["optimizer"]["batch_size"]//world_size, shuffle=False,
+        num_workers=args.workers, pin_memory=True, sampler = TestDistributedSampler(val_dataset))
 
     if args.evaluate:
         validate(val_loader, model, criterion)
@@ -254,8 +255,13 @@ def validate(val_loader, model, criterion, it=None):
     model.eval()
 
     end = time.time()
-    for i, (input, target) in enumerate(val_loader):
+
+    rank = dist.get_rank() if dist.is_initialized() else 0
+    world_size = dist.get_world_size() if dist.is_initialized() else 1
+
+    def process(input, target, all_reduce=None):
         with torch.no_grad():
+
             target = target.cuda(non_blocking=True)
 
             # compute output
@@ -263,29 +269,42 @@ def validate(val_loader, model, criterion, it=None):
             loss = criterion(output, target)
 
             # measure accuracy and record loss
-            prec1, prec5 = accuracy_sum(output, target, topk=(1, 5))
-#            loss *= target.shape[0]
-#            count = target.new_tensor([target.shape[0]],dtype=torch.long)
-#            if dist.is_initialized():
-#              dist.all_reduce(count, dist.reduce_op.SUM)
+            prec1, prec5 = accuracy_sum(output.data, target, topk=(1, 5))
+
+            loss *= target.shape[0]
+            count = target.new_tensor([target.shape[0]],dtype=torch.long)
+            if all_reduce:
+              all_reduce(count)
             for meter,val in (losses,loss), (top1,prec1), (top5,prec5):
-#              if dist.is_initialized():
-#                dist.all_reduce(val, dist.reduce_op.SUM)
-#              val /= count.item()
-              meter.update(val.item(), target.shape[0])
+              if all_reduce:
+                all_reduce(val)
+              val /= count.item()
+              meter.update(val.item(), count.item())
 
-            # measure elapsed time
-            batch_time.update(time.time() - end)
-            end = time.time()
+    # deal with remainder
+    all_reduce = partial(dist.all_reduce, op=dist.reduce_op.SUM) if dist.is_initialized() else None
+    last_group_size = len(val_loader.dataset) % world_size
+    for i, (input, target) in enumerate(val_loader):
+      if input.shape[0] > 1 or world_size == 1:
+        process(input, target, all_reduce)
+      else:
+        process(input, target, partial(dist.all_reduce, op=dist.reduce_op.SUM, group=dist.new_group(range(last_group_size))))
 
-            if i % args.print_freq == 0:
-                logger.info('Test: [{0}/{1}] \t'
+      # measure elapsed time
+      batch_time.update(time.time() - end)
+      end = time.time()
+
+      if i % args.print_freq == 0:
+         logger.info('Test: [{0}/{1}] \t'
                       'Time {batch_time.val:.3f} ({batch_time.avg:.3f}) \t'
                       'Loss {loss.val:.4f} ({loss.avg:.4f}) \t'
                       'Prec@1 {top1.val:.3f} ({top1.avg:.3f}) \t'
                       'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
                     i, len(val_loader), batch_time=batch_time, loss=losses,
                     top1=top1, top5=top5))
+
+    if rank > last_group_size > 0:
+      dist.new_group(range(last_group_size))
 
     logger.info(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'
           .format(top1=top1, top5=top5))
