@@ -20,6 +20,7 @@ import models
 from imagenet import config as config, utils as utils
 from modules import ABN, SingleGPU
 from dataset.sampler import TestDistributedSampler
+from functools import partial
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 parser.add_argument('config', metavar='CONFIG_FILE',
