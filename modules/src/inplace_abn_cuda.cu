@@ -9,6 +9,8 @@
 #include "utils/cuda.cuh"
 #include "inplace_abn.h"
 
+#include <ATen/cuda/CUDAContext.h>
+
 // Operations for reduce
 template<typename T>
 struct SumOp {
@@ -86,7 +88,7 @@ std::vector<at::Tensor> mean_var_cuda(at::Tensor x) {
   // Run kernel
   dim3 blocks(chn);
   dim3 threads(getNumThreads(sp));
-  auto stream = at::globalContext().getCurrentCUDAStream();
+  auto stream = at::cuda::getCurrentCUDAStream();
   AT_DISPATCH_FLOATING_TYPES(x.type(), "mean_var_cuda", ([&] {
     mean_var_kernel<scalar_t><<<blocks, threads, 0, stream>>>(
         x.data<scalar_t>(),
@@ -139,7 +141,7 @@ at::Tensor forward_cuda(at::Tensor x, at::Tensor mean, at::Tensor var, at::Tenso
   // Run kernel
   dim3 blocks(chn);
   dim3 threads(getNumThreads(sp));
-  auto stream = at::globalContext().getCurrentCUDAStream();
+  auto stream = at::cuda::getCurrentCUDAStream();
   AT_DISPATCH_FLOATING_TYPES(x.type(), "forward_cuda", ([&] {
     forward_kernel<scalar_t><<<blocks, threads, 0, stream>>>(
         x.data<scalar_t>(),
@@ -191,7 +193,7 @@ std::vector<at::Tensor> edz_eydz_cuda(at::Tensor z, at::Tensor dz, at::Tensor we
   // Run kernel
   dim3 blocks(chn);
   dim3 threads(getNumThreads(sp));
-  auto stream = at::globalContext().getCurrentCUDAStream();
+  auto stream = at::cuda::getCurrentCUDAStream();
   AT_DISPATCH_FLOATING_TYPES(z.type(), "edz_eydz_cuda", ([&] {
     edz_eydz_kernel<scalar_t><<<blocks, threads, 0, stream>>>(
         z.data<scalar_t>(),
@@ -253,7 +255,7 @@ at::Tensor backward_cuda(at::Tensor z, at::Tensor dz, at::Tensor var, at::Tensor
   // Run kernel
   dim3 blocks(chn);
   dim3 threads(getNumThreads(sp));
-  auto stream = at::globalContext().getCurrentCUDAStream();
+  auto stream = at::cuda::getCurrentCUDAStream();
   AT_DISPATCH_FLOATING_TYPES(z.type(), "backward_cuda", ([&] {
     backward_kernel<scalar_t><<<blocks, threads, 0, stream>>>(
         z.data<scalar_t>(),
@@ -280,7 +282,7 @@ inline void leaky_relu_backward_impl(T *z, T *dz, float slope, int64_t count) {
   thrust::device_ptr<T> th_z = thrust::device_pointer_cast(z);
   thrust::device_ptr<T> th_dz = thrust::device_pointer_cast(dz);
 
-  auto stream = at::globalContext().getCurrentCUDAStream();
+  auto stream = at::cuda::getCurrentCUDAStream();
   thrust::transform_if(thrust::cuda::par.on(stream),
                        th_dz, th_dz + count, th_z, th_dz,
                        [slope] __device__ (const T& dz) { return dz * slope; },
@@ -308,7 +310,7 @@ inline void elu_backward_impl(T *z, T *dz, int64_t count) {
   thrust::device_ptr<T> th_z = thrust::device_pointer_cast(z);
   thrust::device_ptr<T> th_dz = thrust::device_pointer_cast(dz);
 
-  auto stream = at::globalContext().getCurrentCUDAStream();
+  auto stream = at::cuda::getCurrentCUDAStream();
   thrust::transform_if(thrust::cuda::par.on(stream),
                        th_dz, th_dz + count, th_z, th_z, th_dz,
                        [] __device__ (const T& dz, const T& z) { return dz * (z + 1.); },

@@ -8,6 +8,8 @@
 #include "utils/cuda.cuh"
 #include "inplace_abn.h"
 
+#include <ATen/cuda/CUDAContext.h>
+
 // Operations for reduce
 struct SumOpH {
   __device__ SumOpH(const half *t, int c, int s)
@@ -75,13 +77,13 @@ std::vector<at::Tensor> mean_var_cuda_h(at::Tensor x) {
   get_dims(x, num, chn, sp);
 
   // Prepare output tensors
-  auto mean = at::empty(x.type().toScalarType(at::kFloat), {chn});
-  auto var = at::empty(x.type().toScalarType(at::kFloat), {chn});
+  auto mean = at::empty({chn},x.options().dtype(at::kFloat));
+  auto var = at::empty({chn},x.options().dtype(at::kFloat));
 
   // Run kernel
   dim3 blocks(chn);
   dim3 threads(getNumThreads(sp));
-  auto stream = at::globalContext().getCurrentCUDAStream();
+  auto stream = at::cuda::getCurrentCUDAStream();
   mean_var_kernel_h<<<blocks, threads, 0, stream>>>(
       reinterpret_cast<half*>(x.data<at::Half>()),
       mean.data<float>(),
@@ -132,7 +134,7 @@ at::Tensor forward_cuda_h(at::Tensor x, at::Tensor mean, at::Tensor var, at::Ten
   // Run kernel
   dim3 blocks(chn);
   dim3 threads(getNumThreads(sp));
-  auto stream = at::globalContext().getCurrentCUDAStream();
+  auto stream = at::cuda::getCurrentCUDAStream();
   forward_kernel_h<<<blocks, threads, 0, stream>>>(
       reinterpret_cast<half*>(x.data<at::Half>()),
       mean.data<float>(),
@@ -171,13 +173,13 @@ std::vector<at::Tensor> edz_eydz_cuda_h(at::Tensor z, at::Tensor dz, at::Tensor 
   int64_t num, chn, sp;
   get_dims(z, num, chn, sp);
 
-  auto edz = at::empty(z.type().toScalarType(at::kFloat), {chn});
-  auto eydz = at::empty(z.type().toScalarType(at::kFloat), {chn});
+  auto edz = at::empty({chn},z.options().dtype(at::kFloat));
+  auto eydz = at::empty({chn},z.options().dtype(at::kFloat));
 
   // Run kernel
   dim3 blocks(chn);
   dim3 threads(getNumThreads(sp));
-  auto stream = at::globalContext().getCurrentCUDAStream();
+  auto stream = at::cuda::getCurrentCUDAStream();
   edz_eydz_kernel_h<<<blocks, threads, 0, stream>>>(
         reinterpret_cast<half*>(z.data<at::Half>()),
         reinterpret_cast<half*>(dz.data<at::Half>()),
@@ -232,7 +234,7 @@ at::Tensor backward_cuda_h(at::Tensor z, at::Tensor dz, at::Tensor var, at::Tens
   // Run kernel
   dim3 blocks(chn);
   dim3 threads(getNumThreads(sp));
-  auto stream = at::globalContext().getCurrentCUDAStream();
+  auto stream = at::cuda::getCurrentCUDAStream();
   backward_kernel_h<<<blocks, threads, 0, stream>>>(
         reinterpret_cast<half*>(z.data<at::Half>()),
         reinterpret_cast<half*>(dz.data<at::Half>()),
@@ -264,7 +266,7 @@ void leaky_relu_backward_cuda_h(at::Tensor z, at::Tensor dz, float slope) {
   int64_t count = z.numel();
   dim3 threads(getNumThreads(count));
   dim3 blocks = (count + threads.x - 1) / threads.x;
-  auto stream = at::globalContext().getCurrentCUDAStream();
+  auto stream = at::cuda::getCurrentCUDAStream();
   leaky_relu_backward_impl_h<<<blocks, threads, 0, stream>>>(
       reinterpret_cast<half*>(z.data<at::Half>()),
       reinterpret_cast<half*>(dz.data<at::Half>()),

@@ -139,7 +139,7 @@ class InPlaceABN(autograd.Function):
 class InPlaceABNSync(autograd.Function):
     @classmethod
     def forward(cls, ctx, x, weight, bias, running_mean, running_var,
-                training=True, momentum=0.1, eps=1e-05, activation=ACT_LEAKY_RELU, slope=0.01):
+                training=True, momentum=0.1, eps=1e-05, activation=ACT_LEAKY_RELU, slope=0.01, equal_batches=True):
         # Save context
         ctx.training = training
         ctx.momentum = momentum
@@ -152,7 +152,7 @@ class InPlaceABNSync(autograd.Function):
         ctx.world_size = dist.get_world_size() if dist.is_initialized() else 1
 
         #count = _count_samples(x)
-        batch_size = x.new_tensor([x.shape[0]],dtype=torch.float32)
+        batch_size = x.new_tensor([x.shape[0]],dtype=torch.long)
 
         x = x.contiguous()
         weight = weight.contiguous() if ctx.affine else x.new_empty(0)
@@ -162,8 +162,12 @@ class InPlaceABNSync(autograd.Function):
             mean, var = _backend.mean_var(x)
             if ctx.world_size>1:
                 # get global batch size
-                dist.all_reduce(batch_size, dist.reduce_op.SUM)
-                ctx.factor = x.shape[0]/batch_size.item()
+                if equal_batches:
+                    batch_size *= ctx.world_size
+                else:
+                    dist.all_reduce(batch_size, dist.reduce_op.SUM)
+
+                ctx.factor = x.shape[0]/float(batch_size.item())
 
                 mean_all = mean.clone() * ctx.factor
                 dist.all_reduce(mean_all, dist.reduce_op.SUM)
