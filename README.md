@@ -133,7 +133,7 @@ parameters are ignored in favour of the `--scale` and `--crop` command-line argu
 As an example, to validate the `ResNeXt101` trained above using 10-crops of size `224` from images scaled to `256`
 pixels, you can run:
 ```bash
-python test_imagenet.py --crop 224 --scale 256 --ten_crops experiments/resnext101_ipabn_lr_512.json /path/to/checkpoint /path/to/imagenet/root
+python -m torch.distributed.launch --nproc_per_node <n. GPUs per node> test_imagenet.py --crop 224 --scale 256 --ten_crops experiments/resnext101_ipabn_lr_512.json /path/to/checkpoint /path/to/imagenet/root
 ```
 
 ## Usage for Semantic Segmentation on Cityscapes and Mapillary Vistas
