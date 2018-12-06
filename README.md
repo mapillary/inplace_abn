@@ -47,15 +47,15 @@ by inverting the activation function.
 
 To install PyTorch, please refer to https://github.com/pytorch/pytorch#installation.
 
-**NOTE: our code _requires_ PyTorch v0.4**.
+**NOTE: our code _requires_ PyTorch v1.0**.
 
 To install all dependencies using pip, just run:
 ```bash
 pip install -r requirements.txt
 ```
 
-Some parts of InPlace-ABN have native CUDA implementations, which are compiled using Pytorch v0.4's newly introduced
-runtime module loading system, which requires a package called `ninja`.
+Some parts of InPlace-ABN have native CUDA implementations, which are compiled using Pytorch v1.0's newly introduced
+extension mechanism, which requires a package called `ninja`.
 This can easy be installed from most distributions' package managers, _e.g._ in Ubuntu derivatives:
 ```bash
 sudo apt-get install ninja-build
