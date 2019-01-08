@@ -19,6 +19,7 @@ We have now also released the inference code for semantic segmentation, together
 **Update 08 Jan. 2019:**
 - **Enabled multiprocessing and inplace ABN syncronization over multiple processes (previously using threads)**
 - **Added compatibility with fp16**
+- **Requires now PyTorch 1.0**
 
 We have modified the imagenet training code and BN syncronization in order to work with multiple processes. We have also added compatibility of our Inplace ABN module with fp16.
 
