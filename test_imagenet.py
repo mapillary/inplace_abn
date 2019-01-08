@@ -170,13 +170,13 @@ def validate(val_loader, model, criterion):
 
 
     # deal with remainder
-    all_reduce = partial(dist.all_reduce, op=dist.reduce_op.SUM) if dist.is_initialized() else None
+    all_reduce = partial(dist.all_reduce, op=dist.ReduceOp.SUM) if dist.is_initialized() else None
     last_group_size = len(val_loader.dataset) % world_size
     for i, (input, target) in enumerate(val_loader):
-      if input.shape[0] > 1 or world_size == 1:
+      if input.shape[0] > 1 or last_group_size == 0:
         process(input, target, all_reduce)
       else:
-        process(input, target, partial(dist.all_reduce, op=dist.reduce_op.SUM, group=dist.new_group(range(last_group_size))))
+        process(input, target, partial(dist.all_reduce, op=dist.ReduceOp.SUM, group=dist.new_group(range(last_group_size))))
 
       # measure elapsed time
       batch_time.update(time.time() - end)
@@ -190,7 +190,7 @@ def validate(val_loader, model, criterion):
 	      'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
 	    i, len(val_loader), batch_time=batch_time, loss=losses,
 	    top1=top1, top5=top5))
-    if rank > last_group_size > 0:
+    if input.shape[0]==1 and rank > last_group_size > 0:
       dist.new_group(range(last_group_size))
 
     if do_print:

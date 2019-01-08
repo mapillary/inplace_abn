@@ -212,10 +212,10 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch):
           prec1, prec5 = accuracy_sum(output, target, topk=(1, 5))
           count = target.new_tensor([target.shape[0]],dtype=torch.long)
           if dist.is_initialized():
-            dist.all_reduce(count, dist.reduce_op.SUM)
+            dist.all_reduce(count, dist.ReduceOp.SUM)
           for meter,val in (losses,loss), (top1,prec1), (top5,prec5):
             if dist.is_initialized():
-              dist.all_reduce(val, dist.reduce_op.SUM)
+              dist.all_reduce(val, dist.ReduceOp.SUM)
             val /= count.item()
             meter.update(val.item(), count.item())
 
@@ -283,13 +283,13 @@ def validate(val_loader, model, criterion, it=None):
               meter.update(val.item(), count.item())
 
     # deal with remainder
-    all_reduce = partial(dist.all_reduce, op=dist.reduce_op.SUM) if dist.is_initialized() else None
+    all_reduce = partial(dist.all_reduce, op=dist.ReduceOp.SUM) if dist.is_initialized() else None
     last_group_size = len(val_loader.dataset) % world_size
     for i, (input, target) in enumerate(val_loader):
-      if input.shape[0] > 1 or world_size == 1:
+      if input.shape[0] > 1 or last_group_size == 0:
         process(input, target, all_reduce)
       else:
-        process(input, target, partial(dist.all_reduce, op=dist.reduce_op.SUM, group=dist.new_group(range(last_group_size))))
+        process(input, target, partial(dist.all_reduce, op=dist.ReduceOp.SUM, group=dist.new_group(range(last_group_size))))
 
       # measure elapsed time
       batch_time.update(time.time() - end)
@@ -304,7 +304,7 @@ def validate(val_loader, model, criterion, it=None):
                     i, len(val_loader), batch_time=batch_time, loss=losses,
                     top1=top1, top5=top5))
 
-    if rank > last_group_size > 0:
+    if input.shape[0]==1 and rank > last_group_size > 0:
       dist.new_group(range(last_group_size))
 
     logger.info(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'

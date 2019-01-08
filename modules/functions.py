@@ -165,15 +165,15 @@ class InPlaceABNSync(autograd.Function):
                 if equal_batches:
                     batch_size *= ctx.world_size
                 else:
-                    dist.all_reduce(batch_size, dist.reduce_op.SUM)
+                    dist.all_reduce(batch_size, dist.ReduceOp.SUM)
 
                 ctx.factor = x.shape[0]/float(batch_size.item())
 
                 mean_all = mean.clone() * ctx.factor
-                dist.all_reduce(mean_all, dist.reduce_op.SUM)
+                dist.all_reduce(mean_all, dist.ReduceOp.SUM)
 
                 var_all = (var + (mean - mean_all) ** 2) * ctx.factor
-                dist.all_reduce(var_all, dist.reduce_op.SUM)
+                dist.all_reduce(var_all, dist.ReduceOp.SUM)
 
                 mean = mean_all
                 var = var_all
@@ -214,10 +214,10 @@ class InPlaceABNSync(autograd.Function):
 
             if ctx.world_size>1:
                 edz *= ctx.factor
-                dist.all_reduce(edz, dist.reduce_op.SUM)
+                dist.all_reduce(edz, dist.ReduceOp.SUM)
 
                 eydz *= ctx.factor
-                dist.all_reduce(eydz, dist.reduce_op.SUM)
+                dist.all_reduce(eydz, dist.ReduceOp.SUM)
         else:
             edz_local = edz = dz.new_zeros(dz.size(1))
             eydz_local = eydz = dz.new_zeros(dz.size(1))
