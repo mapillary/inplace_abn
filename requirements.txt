@@ -1,4 +1,4 @@
-torch>=0.4
+torch>=1.0
 torchvision
 tensorboardX
 pillow
