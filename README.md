@@ -60,7 +60,7 @@ This can easy be installed from most distributions' package managers, _e.g._ in 
 ```bash
 sudo apt-get install ninja-build
 ```
-In case PyTorch is installed via conda, ninja will be automatically installed too.
+In case PyTorch is installed via conda, `ninja` will be automatically installed too.
 
 ## Training on ImageNet
 
