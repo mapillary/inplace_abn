@@ -16,7 +16,7 @@ training scripts to reproduce the ImageNet classification results reported in ou
 
 We have now also released the inference code for semantic segmentation, together with the Mapillary Vistas trained model leading to [#1 position on the Mapillary Vistas Semantic Segmentation leaderboard](https://eval-vistas.mapillary.com/featured-challenges/1/leaderboard/1). More information can be found at the bottom of this page.
 
-**Update 28 Nov. 2018: Enabled multiprocessing and inplace ABN syncronization over multiple processes. Added compatibility with fp16**
+**Update 08 Jan. 2019: Enabled multiprocessing and inplace ABN syncronization over multiple processes (previously using threads). Added compatibility with fp16**
 
 We have modified the imagenet training code and BN syncronization in order to work with multiple processes. We have also added compatibility of our Inplace ABN module with fp16.
 
