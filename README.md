@@ -17,7 +17,7 @@ training scripts to reproduce the ImageNet classification results reported in ou
 We have now also released the inference code for semantic segmentation, together with the Mapillary Vistas trained model leading to [#1 position on the Mapillary Vistas Semantic Segmentation leaderboard](https://eval-vistas.mapillary.com/featured-challenges/1/leaderboard/1). More information can be found at the bottom of this page.
 
 **Update 08 Jan. 2019:**
-- **Enabled multiprocessing and inplace ABN syncronization over multiple processes (previously using threads)**
+- **Enabled multiprocessing and inplace ABN synchronization over multiple processes (previously using threads)**
 - **Added compatibility with fp16**
 - **Requires now PyTorch 1.0**
 
