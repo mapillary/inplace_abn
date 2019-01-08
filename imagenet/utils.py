@@ -1,12 +1,15 @@
+import torch
 from functools import partial
 
-import torch.nn as nn
 import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
 import torchvision.transforms as transforms
 
 from modules import ABN, InPlaceABN, InPlaceABNSync
 from .transforms import ColorJitter, Lighting
+
+import torch.distributed as dist
+import time
 
 
 def _get_norm_act(network_config):
@@ -163,3 +166,141 @@ def create_transforms(input_config):
     ]
 
     return train_transforms, val_transforms
+
+
+def create_test_transforms(config, crop, scale, ten_crops):
+    normalize = transforms.Normalize(mean=config["mean"], std=config["std"])
+
+    val_transforms = []
+    if scale != -1:
+        val_transforms.append(transforms.Resize(scale))
+    if ten_crops:
+        val_transforms += [
+            transforms.TenCrop(crop),
+            transforms.Lambda(lambda crops: [transforms.ToTensor()(crop) for crop in crops]),
+            transforms.Lambda(lambda crops: [normalize(crop) for crop in crops]),
+            transforms.Lambda(lambda crops: torch.stack(crops))
+        ]
+    else:
+        val_transforms += [
+            transforms.CenterCrop(crop),
+            transforms.ToTensor(),
+            normalize
+        ]
+
+    return val_transforms
+
+
+class AverageMeter(object):
+    """Computes and stores the average and current value"""
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
+
+
+def accuracy_sum(output, target, topk=(1,)):
+    """Computes the precision@k for the specified values of k"""
+    maxk = max(topk)
+    batch_size = target.size(0)
+
+    _, pred = output.topk(maxk, 1, True, True)
+    pred = pred.t()
+    correct = pred.eq(target.view(1, -1).expand_as(pred))
+
+    res = []
+    for k in topk:
+        correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+        res.append(correct_k.mul_(100.0))
+    return res
+
+
+def validate(val_loader, model, criterion, ten_crops=False, print_freq=1, it=None, tb=None, logger=print):
+    batch_time = AverageMeter()
+    losses = AverageMeter()
+    top1 = AverageMeter()
+    top5 = AverageMeter()
+
+    # switch to evaluate mode
+    model.eval()
+
+    end = time.time()
+
+    rank = dist.get_rank() if dist.is_initialized() else 0
+    world_size = dist.get_world_size() if dist.is_initialized() else 1
+    do_print = rank == 0
+
+    def process(input, target, all_reduce=None):
+        with torch.no_grad():
+            if ten_crops:
+                bs, ncrops, c, h, w = input.size()
+                input = input.view(-1, c, h, w)
+
+            target = target.cuda(non_blocking=True)
+
+            # compute output
+            if ten_crops:
+                output = model(input).view(bs, ncrops, -1).mean(1)
+            else:
+                output = model(input)
+            loss = criterion(output, target)
+
+            # measure accuracy and record loss
+            prec1, prec5 = accuracy_sum(output.data, target, topk=(1, 5))
+
+            loss *= target.shape[0]
+            count = target.new_tensor([target.shape[0]], dtype=torch.long)
+            if all_reduce:
+                all_reduce(count)
+            for meter, val in (losses, loss), (top1, prec1), (top5, prec5):
+                if all_reduce:
+                    all_reduce(val)
+                val /= count.item()
+                meter.update(val.item(), count.item())
+
+    # deal with remainder
+    all_reduce = partial(dist.all_reduce, op=dist.ReduceOp.SUM) if dist.is_initialized() else None
+    last_group_size = len(val_loader.dataset) % world_size
+    for i, (input, target) in enumerate(val_loader):
+        if input.shape[0] > 1 or last_group_size == 0:
+            process(input, target, all_reduce)
+        else:
+            process(input, target,
+                    partial(dist.all_reduce, op=dist.ReduceOp.SUM, group=dist.new_group(range(last_group_size))))
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if do_print and i % print_freq == 0:
+            logger('Test: [{0}/{1}]\t'
+                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f}) \t'
+                   'Loss {loss.val:.4f} ({loss.avg:.4f}) \t'
+                   'Prec@1 {top1.val:.3f} ({top1.avg:.3f}) \t'
+                   'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
+                i, len(val_loader), batch_time=batch_time, loss=losses,
+                top1=top1, top5=top5))
+    if input.shape[0] == 1 and rank > last_group_size > 0:
+        dist.new_group(range(last_group_size))
+
+    if do_print:
+        logger(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'
+               .format(top1=top1, top5=top5))
+
+    if it is not None and (not dist.is_initialized() or dist.get_rank() == 0):
+        tb.add_scalar("val/loss", losses.avg, it)
+        tb.add_scalar("val/top1", top1.avg, it)
+        tb.add_scalar("val/top5", top5.avg, it)
+
+    return top1.avg
