@@ -3,8 +3,7 @@
     "arch": "resnet34",
     "activation": "leaky_relu",
     "leaky_relu_slope": 0.01,
-    "input_3x3": true,
-    "bn_mode": "inplace"
+    "bn_mode": "sync"
   },
   "optimizer": {
     "batch_size": 512,
