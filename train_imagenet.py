@@ -26,8 +26,8 @@ parser.add_argument('config', metavar='CONFIG_FILE',
                     help='path to configuration file')
 parser.add_argument('data', metavar='DIR',
                     help='path to dataset')
-parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
-                    help='number of data loading workers (default: 4)')
+parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
+                    help='number of data loading workers (default: 2)')
 parser.add_argument('--print-freq', '-p', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
@@ -166,7 +166,7 @@ def main():
             'state_dict': model.state_dict(),
             'best_prec1': best_prec1,
             'optimizer': optimizer.state_dict(),
-        }, is_best)
+        }, is_best, args.log_dir)
 
 
 def train(train_loader, model, criterion, optimizer, scheduler, epoch):
@@ -243,10 +243,11 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch):
                         tb.add_histogram(name, param.clone().cpu().data.numpy(), i + epoch * len(train_loader))
 
 
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
-    torch.save(state, filename)
+def save_checkpoint(state, is_best, log_dir):
+    filepath=os.path.join(log_dir,'checkpoint.pth.tar')
+    torch.save(state,filepath )
     if is_best:
-        shutil.copyfile(filename, 'model_best.pth.tar')
+        shutil.copyfile(filepath, os.path.join(log_dir,'model_best.pth.tar'))
 
 
 def init_weights(model):
