@@ -160,13 +160,14 @@ def main():
         # remember best prec@1 and save checkpoint
         is_best = prec1 > best_prec1
         best_prec1 = max(prec1, best_prec1)
-        save_checkpoint({
-            'epoch': epoch + 1,
-            'arch': conf["network"]["arch"],
-            'state_dict': model.state_dict(),
-            'best_prec1': best_prec1,
-            'optimizer': optimizer.state_dict(),
-        }, is_best, args.log_dir)
+        if rank==0:
+            save_checkpoint({
+                'epoch': epoch + 1,
+                'arch': conf["network"]["arch"],
+                'state_dict': model.state_dict(),
+                'best_prec1': best_prec1,
+                'optimizer': optimizer.state_dict(),
+            }, is_best, args.log_dir)
 
 
 def train(train_loader, model, criterion, optimizer, scheduler, epoch):
