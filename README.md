@@ -18,7 +18,7 @@ We have now also released the inference code for semantic segmentation, together
 
 **Update 08 Jan. 2019:**
 - **Enabled multiprocessing and inplace ABN synchronization over multiple processes (previously using threads). It now requires to use DistributedDataParallel instead of DataParallel**
-- **Added compatibility with fp16**
+- **Added compatibility with fp16 (currently allows fp16 input but requires the module to stay in fp32 mode)**
 - **Requires now PyTorch 1.0**
 
 **Update 12 Feb. 2019:**
