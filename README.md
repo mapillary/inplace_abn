@@ -21,8 +21,8 @@ We have now also released the inference code for semantic segmentation, together
 - **Added compatibility with fp16 (currently allows fp16 input but requires the module to stay in fp32 mode)**
 - **Requires now PyTorch 1.0**
 
-**Update 12 Feb. 2019:**
-- **Added ResNet models**
+**Update 14 Feb. 2019:**
+- **Added ResNet34 and ResNet50 models**
 
 We have modified the imagenet training code and BN synchronization in order to work with multiple processes. We have also added compatibility of our Inplace ABN module with fp16.
 
@@ -80,6 +80,10 @@ Here you can find the results from our arXiv paper (top-1 / top-5 scores) with c
 | [WideResNet38, InPlace-ABN][4]    | 256   | 79.72 / 94.78  | 81.03 / 95.43  | 80.69 / 95.27 | [`1c085ab70b789cc1d6c1594f7a761007`][9] |
 | [ResNeXt101, InPlace-ABN sync][5] | 256   | 77.70 / 93.78  | 79.18 / 94.60  | 78.98 / 94.56 | [`0a85a21847b15e5a242e17bf3b753849`][10] |
 | [DenseNet264, InPlace-ABN][11]    | 256   | 78.57 / 94.17  | 79.72 / 94.93  | 79.49 / 94.89 | [`0b413d67b725619441d0646d663865bf`][12] |
+| [ResNet50, InPlace-ABN sync][13]  | 512   | 75.53 / 92.59  | 77.04 / 93.57  | 76.60 / 93.49 | [`2522ca639f7fdfd7c0089ba1f5f6c2e8`][14] |
+| [ResNet34, InPlace-ABN sync][15]  | 512   | 73.27 / 91.34  | 75.19 / 92.66  | 74.87 / 92.42 | [`61515c1484911c3cc753d405131e1dda`][16] |
+
+
 
 [1]: experiments/resnext101_stdbn_lr_256.json
 [2]: experiments/resnext101_ipabn_lr_512.json
@@ -93,6 +97,10 @@ Here you can find the results from our arXiv paper (top-1 / top-5 scores) with c
 [10]: https://drive.google.com/file/d/1v2gmUPBMDKf0wZm9r1JwCQLGAig0DdXJ/view
 [11]: experiments/densenet264_ipabn_lr_256.json
 [12]: https://drive.google.com/file/d/1J2wp59bzzEd6zttM6oMa1KgbmCL1MS0k/view
+[13]: experiments/resnet50_ipabn-sync_lr_512.json
+[14]: https://drive.google.com/file/d/1N7kjWrnUbD_aBOUNi9ZLGnI3E_1ATH8U/view
+[15]: experiments/resnet34_ipabn-sync_lr_512.json
+[16]: https://drive.google.com/file/d/1V5dCIZeRCfnZi9krNaQNhXNDHyXz9JR8/view
 ### Data preparation
 
 Our script uses [torchvision.datasets.ImageFolder](http://pytorch.org/docs/master/torchvision/datasets.html#torchvision.datasets.ImageFolder)
