@@ -22,7 +22,7 @@ We have now also released the inference code for semantic segmentation, together
 - **Requires now PyTorch 1.0**
 
 **Update 14 Feb. 2019:**
-- **Added ResNet34 and ResNet50 models**
+- **Added ResNet34v1 and ResNet50v1 models**
 
 We have modified the imagenet training code and BN synchronization in order to work with multiple processes. We have also added compatibility of our Inplace ABN module with fp16.
 
