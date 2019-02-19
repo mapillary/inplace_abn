@@ -80,8 +80,8 @@ Here you can find the results from our arXiv paper (top-1 / top-5 scores) with c
 | [WideResNet38, InPlace-ABN][4]    | 256   | 79.72 / 94.78  | 81.03 / 95.43  | 80.69 / 95.27 | [`1c085ab70b789cc1d6c1594f7a761007`][9] |
 | [ResNeXt101, InPlace-ABN sync][5] | 256   | 77.70 / 93.78  | 79.18 / 94.60  | 78.98 / 94.56 | [`0a85a21847b15e5a242e17bf3b753849`][10] |
 | [DenseNet264, InPlace-ABN][11]    | 256   | 78.57 / 94.17  | 79.72 / 94.93  | 79.49 / 94.89 | [`0b413d67b725619441d0646d663865bf`][12] |
-| [ResNet50, InPlace-ABN sync][13]  | 512   | 75.53 / 92.59  | 77.04 / 93.57  | 76.60 / 93.49 | [`2522ca639f7fdfd7c0089ba1f5f6c2e8`][14] |
-| [ResNet34, InPlace-ABN sync][15]  | 512   | 73.27 / 91.34  | 75.19 / 92.66  | 74.87 / 92.42 | [`61515c1484911c3cc753d405131e1dda`][16] |
+| [ResNet50v1, InPlace-ABN sync][13]  | 512   | 75.53 / 92.59  | 77.04 / 93.57  | 76.60 / 93.49 | [`2522ca639f7fdfd7c0089ba1f5f6c2e8`][14] |
+| [ResNet34v1, InPlace-ABN sync][15]  | 512   | 73.27 / 91.34  | 75.19 / 92.66  | 74.87 / 92.42 | [`61515c1484911c3cc753d405131e1dda`][16] |
 
 
 
