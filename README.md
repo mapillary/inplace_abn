@@ -21,8 +21,8 @@ We have now also released the inference code for semantic segmentation, together
 - **Added compatibility with fp16 (currently allows fp16 input but requires the module to stay in fp32 mode)**
 - **Requires now PyTorch 1.0**
 
-**Update 14 Feb. 2019:**
-- **Added ResNet34v1 and ResNet50v1 models**
+**Update Feb. 2019:**
+- **Added ResNet34v1, ResNet50v1 and ResNet101v1 ImageNet-1k pre-trained models**
 
 We have modified the imagenet training code and BN synchronization in order to work with multiple processes. We have also added compatibility of our Inplace ABN module with fp16.
 
@@ -68,7 +68,7 @@ sudo apt-get install ninja-build
 ```
 In case PyTorch is installed via conda, `ninja` will be automatically installed too.
 
-## Training on ImageNet
+## Training on ImageNet-1k
 
 Here you can find the results from our arXiv paper (top-1 / top-5 scores) with corresponding, trained models and md5 checksums, respectively. The model files provided below are made available under the [license attached to ImageNet](http://www.image-net.org/download-faq). 
 
@@ -82,9 +82,8 @@ Here you can find the results from our arXiv paper (top-1 / top-5 scores) with c
 | [DenseNet264, InPlace-ABN][11]    | 256   | 78.57 / 94.17  | 79.72 / 94.93  | 79.49 / 94.89 | [`0b413d67b725619441d0646d663865bf`][12] |
 | [ResNet50v1, InPlace-ABN sync][13]  | 512   | 75.53 / 92.59  | 77.04 / 93.57  | 76.60 / 93.49 | [`2522ca639f7fdfd7c0089ba1f5f6c2e8`][14] |
 | [ResNet34v1, InPlace-ABN sync][15]  | 512   | 73.27 / 91.34  | 75.19 / 92.66  | 74.87 / 92.42 | [`61515c1484911c3cc753d405131e1dda`][16] |
-
-
-
+| [ResNet101v1, InPlace-ABN sync][17]  | 512   | 77.07 / 93.45  | 78.58 / 94.40  | 78.25 / 94.19 | [`1552ae0f3d610108df702135f56bd27b`][18] |
+  
 [1]: experiments/resnext101_stdbn_lr_256.json
 [2]: experiments/resnext101_ipabn_lr_512.json
 [3]: experiments/resnext152_ipabn_lr_256.json
@@ -101,6 +100,9 @@ Here you can find the results from our arXiv paper (top-1 / top-5 scores) with c
 [14]: https://drive.google.com/file/d/1N7kjWrnUbD_aBOUNi9ZLGnI3E_1ATH8U/view
 [15]: experiments/resnet34_ipabn-sync_lr_512.json
 [16]: https://drive.google.com/file/d/1V5dCIZeRCfnZi9krNaQNhXNDHyXz9JR8/view
+[17]: experiments/resnet101_ipabn-sync_lr_512.json
+[18]: https://drive.google.com/file/d/1oFVSIUYAxa_uNDq2OLkbhyiFmKwnYzpt/view
+
 ### Data preparation
 
 Our script uses [torchvision.datasets.ImageFolder](http://pytorch.org/docs/master/torchvision/datasets.html#torchvision.datasets.ImageFolder)
