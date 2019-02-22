@@ -172,10 +172,10 @@ The segmentation model file provided below is made available under a [CC BY-NC-S
 
 | Network                       | mIOU  | Trained model (+md5)                   |
 |-------------------------------|-------|----------------------------------------|
-| [WideResNet38 + DeepLab3][13] | 53.42 | [913f78486a34aa1577a7cd295e8a33bb][14] |
+| [WideResNet38 + DeepLab3][19] | 53.42 | [913f78486a34aa1577a7cd295e8a33bb][20] |
 
-[13]: test_vistas.py
-[14]: https://drive.google.com/file/d/1SJJx5-LFG3J3M99TrPMU-z6ZmgWynxo-/view
+[19]: test_vistas.py
+[20]: https://drive.google.com/file/d/1SJJx5-LFG3J3M99TrPMU-z6ZmgWynxo-/view
 
 To use this, please download the `.pth.tar` model file linked above and run the `test_vistas.py` script as follows:
 ```bash
