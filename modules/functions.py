@@ -89,8 +89,8 @@ class InPlaceABN(autograd.Function):
         # Prepare inputs
         count = _count_samples(x)
         x = x.contiguous()
-        weight = weight.contiguous() if ctx.affine else x.new_empty(0)
-        bias = bias.contiguous() if ctx.affine else x.new_empty(0)
+        weight = weight.contiguous() if ctx.affine else x.new_empty(0, dtype=torch.float32)
+        bias = bias.contiguous() if ctx.affine else x.new_empty(0, dtype=torch.float32)
 
         if ctx.training:
             mean, var = _backend.mean_var(x)
@@ -159,8 +159,8 @@ class InPlaceABNSync(autograd.Function):
         batch_size = x.new_tensor([x.shape[0]], dtype=torch.long)
 
         x = x.contiguous()
-        weight = weight.contiguous() if ctx.affine else x.new_empty(0)
-        bias = bias.contiguous() if ctx.affine else x.new_empty(0)
+        weight = weight.contiguous() if ctx.affine else x.new_empty(0, dtype=torch.float32)
+        bias = bias.contiguous() if ctx.affine else x.new_empty(0, dtype=torch.float32)
 
         if ctx.training:
             mean, var = _backend.mean_var(x)
