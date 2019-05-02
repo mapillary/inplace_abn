@@ -49,11 +49,8 @@ training time.
 To achieve this, we rewrite the backward pass of BN in terms of its output `y`, which is in turn reconstructed from `z`
 by inverting the activation function.
 
-The parametrization for the scaling factor of BN changed compared to standard BN, in order to ensure an invertible transformation. Specifically, the scaling factor becomes:
-<p align="center">
-![new_gamma = abs(gamma)+eps](./gamma.svg)
-<img src="./gamma.svg">
-  </p>
+The parametrization for the scaling factor of BN changed compared to standard BN, in order to ensure an invertible transformation. Specifically, the scaling factor becomes
+<img src="./equation.svg">.
 
 ## Requirements
 
