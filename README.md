@@ -16,13 +16,19 @@ training scripts to reproduce the ImageNet classification results reported in ou
 
 We have now also released the inference code for semantic segmentation, together with the Mapillary Vistas trained model leading to [#1 position on the Mapillary Vistas Semantic Segmentation leaderboard](https://eval-vistas.mapillary.com/featured-challenges/1/leaderboard/1). More information can be found at the bottom of this page.
 
+**Update 04 Jul. 2019: version 1.0.0**
+- Complete rewrite of the CUDA code following the most recent native BN implementation from Pytorch
+- Improved synchronized BN implementation, correctly handling different per-GPU batch sizes and Pytorch distributed groups
+- The iABN layers are now packaged in an installable python library to simplify use in other projects
+- The Imagenet / Vistas scripts are still available in the `scripts` folder
+
 **Update 08 Jan. 2019:**
-- **Enabled multiprocessing and inplace ABN synchronization over multiple processes (previously using threads). It now requires to use DistributedDataParallel instead of DataParallel**
-- **Added compatibility with fp16 (currently allows fp16 input but requires the module to stay in fp32 mode)**
-- **Requires now PyTorch 1.0**
+- Enabled multiprocessing and inplace ABN synchronization over multiple processes (previously using threads). It now requires to use DistributedDataParallel instead of DataParallel
+- Added compatibility with fp16 (currently allows fp16 input but requires the module to stay in fp32 mode)
+- Requires now PyTorch 1.0
 
 **Update Feb. 2019:**
-- **Added ResNet34v1, ResNet50v1 and ResNet101v1 ImageNet-1k pre-trained models**
+- Added ResNet34v1, ResNet50v1 and ResNet101v1 ImageNet-1k pre-trained models
 
 We have modified the imagenet training code and BN synchronization in order to work with multiple processes. We have also added compatibility of our Inplace ABN module with fp16.
 
@@ -56,20 +62,25 @@ The parametrization for the scaling factor of BN changed compared to standard BN
 
 To install PyTorch, please refer to https://github.com/pytorch/pytorch#installation.
 
-**NOTE: our code _requires_ PyTorch v1.0**.
+**NOTE: our code _requires_ PyTorch v1.0 or later**.
 
-To install all dependencies using pip, just run:
+To install the package containing the iABN layers:
 ```bash
+pip install git+https://github.com/mapillary/inplace_abn.git@v1.0.0
+```
+Note that some parts of InPlace-ABN have native C++/CUDA implementations, meaning that the command above will need to
+compile them.
+
+Alternatively, to download and install the latest version of our library, also obtaining a copy of the Imagenet / Vistas
+scripts:
+```bash
+git clone https://github.com/mapillary/inplace_abn.git
+cd inplace_abn
+python setup.py install
+cd scripts
 pip install -r requirements.txt
 ```
-
-Some parts of InPlace-ABN have native CUDA implementations, which are compiled using Pytorch v1.0's newly introduced
-extension mechanism, which requires a package called `ninja`.
-This can easy be installed from most distributions' package managers, _e.g._ in Ubuntu derivatives:
-```bash
-sudo apt-get install ninja-build
-```
-In case PyTorch is installed via conda, `ninja` will be automatically installed too.
+The last of the commands above will install some additional libraries required by the Imagenet / Vistas scripts.
 
 ## Training on ImageNet-1k
 
@@ -87,23 +98,23 @@ Here you can find the results from our arXiv paper (top-1 / top-5 scores) with c
 | [ResNet34v1, InPlace-ABN sync][15]  | 512   | 73.27 / 91.34  | 75.19 / 92.66  | 74.87 / 92.42 | [`61515c1484911c3cc753d405131e1dda`][16] |
 | [ResNet101v1, InPlace-ABN sync][17]  | 512   | 77.07 / 93.45  | 78.58 / 94.40  | 78.25 / 94.19 | [`1552ae0f3d610108df702135f56bd27b`][18] |
   
-[1]: experiments/resnext101_stdbn_lr_256.json
-[2]: experiments/resnext101_ipabn_lr_512.json
-[3]: experiments/resnext152_ipabn_lr_256.json
-[4]: experiments/wider_resnet38_ipabn_lr_256.json
-[5]: experiments/resnext101_ipabn-sync_lr_256.json
+[1]: scripts/experiments/resnext101_stdbn_lr_256.json
+[2]: scripts/experiments/resnext101_ipabn_lr_512.json
+[3]: scripts/experiments/resnext152_ipabn_lr_256.json
+[4]: scripts/experiments/wider_resnet38_ipabn_lr_256.json
+[5]: scripts/experiments/resnext101_ipabn-sync_lr_256.json
 [6]: https://drive.google.com/file/d/1qT8qCSZzUHorai1EP6Liywa28ASac_G_/view
 [7]: https://drive.google.com/file/d/1rQd-NoZuCsGZ7_l_X9GO1GGiXeXHE8CT/view
 [8]: https://drive.google.com/file/d/1RmHK3tdVTVsHiyNO14bYLkMC0XUjenIn/view
 [9]: https://drive.google.com/file/d/1Y0McSz9InDSxMEcBylAbCv1gvyeaz8Ij/view
 [10]: https://drive.google.com/file/d/1v2gmUPBMDKf0wZm9r1JwCQLGAig0DdXJ/view
-[11]: experiments/densenet264_ipabn_lr_256.json
+[11]: scripts/experiments/densenet264_ipabn_lr_256.json
 [12]: https://drive.google.com/file/d/1J2wp59bzzEd6zttM6oMa1KgbmCL1MS0k/view
-[13]: experiments/resnet50_ipabn-sync_lr_512.json
+[13]: scripts/experiments/resnet50_ipabn-sync_lr_512.json
 [14]: https://drive.google.com/file/d/1N7kjWrnUbD_aBOUNi9ZLGnI3E_1ATH8U/view
-[15]: experiments/resnet34_ipabn-sync_lr_512.json
+[15]: scripts/experiments/resnet34_ipabn-sync_lr_512.json
 [16]: https://drive.google.com/file/d/1V5dCIZeRCfnZi9krNaQNhXNDHyXz9JR8/view
-[17]: experiments/resnet101_ipabn-sync_lr_512.json
+[17]: scripts/experiments/resnet101_ipabn-sync_lr_512.json
 [18]: https://drive.google.com/file/d/1oFVSIUYAxa_uNDq2OLkbhyiFmKwnYzpt/view
 
 ### Data preparation
@@ -128,31 +139,35 @@ validation images need to be split into class sub-folders as described above.
 
 ### Training
 
-The main training script is `train_imagenet.py`: this supports training on ImageNet, or any other dataset formatted
-as described above, while keeping a log of relevant metrics in Tensorboard format and periodically saving snapshots.
-Most training parameters can be specified as a `json`-formatted configuration file (look [here](imagenet/config.py)
-for a complete list of configurable parameters).
+The main training script is `scripts/train_imagenet.py`: this supports training on ImageNet, or any other dataset
+formatted as described above, while keeping a log of relevant metrics in Tensorboard format and periodically saving
+snapshots.
+Most training parameters can be specified as a `json`-formatted configuration file (look
+[here](scripts/imagenet/config.py) for a complete list of configurable parameters).
 All parameters not explicitly specified in the configuration file are set to their defaults, also available in
-[imagenet/config.py](imagenet/config.py).
+[scripts/imagenet/config.py](scripts/imagenet/config.py).
 
-Our arXiv results can be reproduced by running `train_imagenet.py` with the configuration files in `./experiments`.
+Our arXiv results can be reproduced by running `scripts/train_imagenet.py` with the configuration files in
+`scripts/experiments`.
 As an example, the command to train `ResNeXt101` with InPlace-ABN, Leaky ReLU and `batch_size = 512` is:
 ```bash
+cd scripts
 python -m torch.distributed.launch --nproc_per_node <n. GPUs per node> train_imagenet.py --log-dir /path/to/tensorboard/logs experiments/resnext101_ipabn_lr_512.json /path/to/imagenet/root
 ```
 
 ### Validation
 
-Validation is run by `train_imagenet.py` at the end of every training epoch.
-To validate a trained model, you can use the `test_imagenet.py` script, which allows for 10-crops validation and
+Validation is run by `scripts/train_imagenet.py` at the end of every training epoch.
+To validate a trained model, you can use the `scripts/test_imagenet.py` script, which allows for 10-crops validation and
 transferring weights across compatible networks (_e.g._ from `ResNeXt101` with ReLU to `ResNeXt101` with Leaky
 ReLU).
-This script accepts the same configuration files as `train_imagenet.py`, but note that the `scale_val` and `crop_val`
-parameters are ignored in favour of the `--scale` and `--crop` command-line arguments.
+This script accepts the same configuration files as `scripts/train_imagenet.py`, but note that the `scale_val` and
+`crop_val` parameters are ignored in favour of the `--scale` and `--crop` command-line arguments.
 
 As an example, to validate the `ResNeXt101` trained above using 10-crops of size `224` from images scaled to `256`
 pixels, you can run:
 ```bash
+cd scripts
 python -m torch.distributed.launch --nproc_per_node <n. GPUs per node> test_imagenet.py --crop 224 --scale 256 --ten_crops experiments/resnext101_ipabn_lr_512.json /path/to/checkpoint /path/to/imagenet/root
 ```
 
@@ -171,17 +186,19 @@ The training settings mostly follow the description in our [paper](https://arxiv
 
 We release our WideResNet38 + DeepLab3 segmentation model trained on the Mapillary Vistas research set.
 This is the model used to reach #1 position on the MVD semantic segmentation leaderboard.
-The segmentation model file provided below is made available under a [CC BY-NC-SA 4.0 license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+The segmentation model file provided below is made available under a
+[CC BY-NC-SA 4.0 license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 | Network                       | mIOU  | Trained model (+md5)                   |
 |-------------------------------|-------|----------------------------------------|
 | [WideResNet38 + DeepLab3][19] | 53.42 | [913f78486a34aa1577a7cd295e8a33bb][20] |
 
-[19]: test_vistas.py
+[19]: scripts/test_vistas.py
 [20]: https://drive.google.com/file/d/1SJJx5-LFG3J3M99TrPMU-z6ZmgWynxo-/view
 
 To use this, please download the `.pth.tar` model file linked above and run the `test_vistas.py` script as follows:
 ```bash
+cd scripts
 python test_vistas.py /path/to/model.pth.tar /path/to/input/folder /path/to/output/folder
 ```
 

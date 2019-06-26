@@ -1,0 +1,28 @@
+{
+  "network": {
+    "arch": "wider_resnet38",
+    "activation": "leaky_relu",
+    "activation_param": 0.01,
+    "input_3x3": true,
+    "bn_mode": "inplace"
+  },
+  "optimizer": {
+    "batch_size": 256,
+    "clip": 0,
+    "learning_rate": 0.1,
+    "nesterov": true,
+    "schedule": {
+      "type": "linear",
+      "mode": "step",
+      "epochs": 90,
+      "params": {
+        "alpha": -0.000002222,
+        "beta": 1.0
+      }
+    }
+  },
+  "input": {
+    "color_jitter_train": true,
+    "lighting_train": true
+  }
+}
