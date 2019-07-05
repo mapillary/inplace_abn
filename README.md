@@ -16,21 +16,7 @@ training scripts to reproduce the ImageNet classification results reported in ou
 
 We have now also released the inference code for semantic segmentation, together with the Mapillary Vistas trained model leading to [#1 position on the Mapillary Vistas Semantic Segmentation leaderboard](https://eval-vistas.mapillary.com/featured-challenges/1/leaderboard/1). More information can be found at the bottom of this page.
 
-**Update 04 Jul. 2019: version 1.0.0**
-- Complete rewrite of the CUDA code following the most recent native BN implementation from Pytorch
-- Improved synchronized BN implementation, correctly handling different per-GPU batch sizes and Pytorch distributed groups
-- The iABN layers are now packaged in an installable python library to simplify use in other projects
-- The Imagenet / Vistas scripts are still available in the `scripts` folder
-
-**Update 08 Jan. 2019:**
-- Enabled multiprocessing and inplace ABN synchronization over multiple processes (previously using threads). It now requires to use DistributedDataParallel instead of DataParallel
-- Added compatibility with fp16 (currently allows fp16 input but requires the module to stay in fp32 mode)
-- Requires now PyTorch 1.0
-
-**Update Feb. 2019:**
-- Added ResNet34v1, ResNet50v1 and ResNet101v1 ImageNet-1k pre-trained models
-
-We have modified the imagenet training code and BN synchronization in order to work with multiple processes. We have also added compatibility of our Inplace ABN module with fp16.
+## Citation
 
 If you use In-Place Activated BatchNorm in your research, please cite:
 ```bibtex
@@ -207,3 +193,24 @@ output folder as `.png` images.
 For additional options, _e.g._ test time augmentation, please consult the script's help message.
 
 The results on the test data written above were obtained by employing only scale 1.0 + flipping. 
+
+## Changelog
+
+**Update 05 Jul. 2019: version 1.0.1**
+- Restored support for float16 inputs with float32 `weight` and `bias`.
+
+**Update 04 Jul. 2019: version 1.0.0**
+- Complete rewrite of the CUDA code following the most recent native BN implementation from Pytorch
+- Improved synchronized BN implementation, correctly handling different per-GPU batch sizes and Pytorch distributed groups
+- The iABN layers are now packaged in an installable python library to simplify use in other projects
+- The Imagenet / Vistas scripts are still available in the `scripts` folder
+
+**Update 08 Jan. 2019:**
+- Enabled multiprocessing and inplace ABN synchronization over multiple processes (previously using threads). It now requires to use DistributedDataParallel instead of DataParallel
+- Added compatibility with fp16 (currently allows fp16 input but requires the module to stay in fp32 mode)
+- Requires now PyTorch 1.0
+
+**Update Feb. 2019:**
+- Added ResNet34v1, ResNet50v1 and ResNet101v1 ImageNet-1k pre-trained models
+
+We have modified the imagenet training code and BN synchronization in order to work with multiple processes. We have also added compatibility of our Inplace ABN module with fp16.
