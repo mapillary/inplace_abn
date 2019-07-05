@@ -10,6 +10,7 @@
 #include "utils.h"
 #include "cuda_utils.cuh"
 #include "inplace_abn_kernels.cuh"
+#include "dispatch.h"
 
 /***********************************************************************************************************************
  * Templated implementations
@@ -80,7 +81,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> reduce_statistics_template(
   return std::make_tuple(mean, var, count);
 }
 
-template<typename scalar_t, typename index_t>
+template<typename scalar_t, typename prmscalar_t, typename index_t>
 void forward_template(at::Tensor& x_, const at::Tensor& mean, const at::Tensor& var,
                       const c10::optional<at::Tensor>& weight, const c10::optional<at::Tensor>& bias,
                       float eps, Activation activation, float activation_param) {
@@ -95,8 +96,8 @@ void forward_template(at::Tensor& x_, const at::Tensor& mean, const at::Tensor& 
   auto x_accessor = x.packed_accessor<scalar_t, 3, at::RestrictPtrTraits, index_t>();
   auto mean_accessor = mean.packed_accessor<accscalar_t, 1, at::RestrictPtrTraits, index_t>();
   auto var_accessor = var.packed_accessor<accscalar_t, 1, at::RestrictPtrTraits, index_t>();
-  auto weight_accessor = packed_accessor_or_dummy<scalar_t, 1, at::RestrictPtrTraits, index_t>(weight);
-  auto bias_accessor = packed_accessor_or_dummy<scalar_t, 1, at::RestrictPtrTraits, index_t>(bias);
+  auto weight_accessor = packed_accessor_or_dummy<prmscalar_t, 1, at::RestrictPtrTraits, index_t>(weight);
+  auto bias_accessor = packed_accessor_or_dummy<prmscalar_t, 1, at::RestrictPtrTraits, index_t>(bias);
 
   // Kernel parameters
   auto stream = at::cuda::getCurrentCUDAStream();
@@ -109,21 +110,21 @@ void forward_template(at::Tensor& x_, const at::Tensor& mean, const at::Tensor& 
   // Invoke kernel
   switch (activation) {
   case Activation::LeakyReLU:
-    forward_kernel<scalar_t, accscalar_t, index_t, Activation::LeakyReLU><<<blocks, threads, 0, stream>>>(
+    forward_kernel<scalar_t, accscalar_t, prmscalar_t, index_t, Activation::LeakyReLU><<<blocks, threads, 0, stream>>>(
         x_accessor, mean_accessor, var_accessor, weight_accessor, bias_accessor, eps, activation_param);
     break;
   case Activation::ELU:
-    forward_kernel<scalar_t, accscalar_t, index_t, Activation::ELU><<<blocks, threads, 0, stream>>>(
+    forward_kernel<scalar_t, accscalar_t, prmscalar_t, index_t, Activation::ELU><<<blocks, threads, 0, stream>>>(
         x_accessor, mean_accessor, var_accessor, weight_accessor, bias_accessor, eps, activation_param);
     break;
   case Activation::Identity:
-    forward_kernel<scalar_t, accscalar_t, index_t, Activation::Identity><<<blocks, threads, 0, stream>>>(
+    forward_kernel<scalar_t, accscalar_t, prmscalar_t, index_t, Activation::Identity><<<blocks, threads, 0, stream>>>(
         x_accessor, mean_accessor, var_accessor, weight_accessor, bias_accessor, eps, activation_param);
     break;
   }
 }
 
-template<typename scalar_t, typename index_t>
+template<typename scalar_t, typename prmscalar_t, typename index_t>
 std::tuple<at::Tensor, at::Tensor> backward_reduce_template(
     at::Tensor& y_act_, at::Tensor& dy_act_, const c10::optional<at::Tensor>& weight,
     const c10::optional<at::Tensor>& bias, float eps, Activation activation, float activation_param) {
@@ -146,8 +147,8 @@ std::tuple<at::Tensor, at::Tensor> backward_reduce_template(
   // Make accessors
   auto y_act_accessor = y_act.packed_accessor<scalar_t, 3, at::RestrictPtrTraits, index_t>();
   auto dy_act_accessor = dy_act.packed_accessor<scalar_t, 3, at::RestrictPtrTraits, index_t>();
-  auto weight_accessor = packed_accessor_or_dummy<scalar_t, 1, at::RestrictPtrTraits, index_t>(weight);
-  auto bias_accessor = packed_accessor_or_dummy<scalar_t, 1, at::RestrictPtrTraits, index_t>(bias);
+  auto weight_accessor = packed_accessor_or_dummy<prmscalar_t, 1, at::RestrictPtrTraits, index_t>(weight);
+  auto bias_accessor = packed_accessor_or_dummy<prmscalar_t, 1, at::RestrictPtrTraits, index_t>(bias);
   auto sum_dy_accessor = sum_dy.packed_accessor<accscalar_t, 1, at::RestrictPtrTraits, index_t>();
   auto sum_xhat_dy_accessor = sum_xhat_dy.packed_accessor<accscalar_t, 1, at::RestrictPtrTraits, index_t>();
 
@@ -161,17 +162,17 @@ std::tuple<at::Tensor, at::Tensor> backward_reduce_template(
   // Invoke kernel
   switch (activation) {
   case Activation::LeakyReLU:
-    backward_reduce_kernel<scalar_t, accscalar_t, index_t, Activation::LeakyReLU><<<blocks, threads, 0, stream>>>(
+    backward_reduce_kernel<scalar_t, accscalar_t, prmscalar_t, index_t, Activation::LeakyReLU><<<blocks, threads, 0, stream>>>(
         y_act_accessor, dy_act_accessor, weight_accessor, bias_accessor, sum_dy_accessor, sum_xhat_dy_accessor,
         eps, activation_param);
     break;
   case Activation::ELU:
-    backward_reduce_kernel<scalar_t, accscalar_t, index_t, Activation::ELU><<<blocks, threads, 0, stream>>>(
+    backward_reduce_kernel<scalar_t, accscalar_t, prmscalar_t, index_t, Activation::ELU><<<blocks, threads, 0, stream>>>(
         y_act_accessor, dy_act_accessor, weight_accessor, bias_accessor, sum_dy_accessor, sum_xhat_dy_accessor,
         eps, activation_param);
     break;
   case Activation::Identity:
-    backward_reduce_kernel<scalar_t, accscalar_t, index_t, Activation::Identity><<<blocks, threads, 0, stream>>>(
+    backward_reduce_kernel<scalar_t, accscalar_t, prmscalar_t, index_t, Activation::Identity><<<blocks, threads, 0, stream>>>(
         y_act_accessor, dy_act_accessor, weight_accessor, bias_accessor, sum_dy_accessor, sum_xhat_dy_accessor,
         eps, activation_param);
     break;
@@ -180,7 +181,7 @@ std::tuple<at::Tensor, at::Tensor> backward_reduce_template(
   return std::make_tuple(sum_dy, sum_xhat_dy);
 }
 
-template<typename scalar_t, typename index_t>
+template<typename scalar_t, typename prmscalar_t, typename index_t>
 at::Tensor backward_template(const at::Tensor& xhat_, const at::Tensor& dy_, const at::Tensor& var,
                              const at::Tensor& count, const at::Tensor& sum_dy, const at::Tensor& sum_xhat_dy,
                              const c10::optional<at::Tensor>& weight, float eps) {
@@ -203,7 +204,7 @@ at::Tensor backward_template(const at::Tensor& xhat_, const at::Tensor& dy_, con
   auto count_accessor = count.packed_accessor<int64_t, 1, at::RestrictPtrTraits, index_t>();
   auto sum_dy_accessor = sum_dy.packed_accessor<accscalar_t, 1, at::RestrictPtrTraits, index_t>();
   auto sum_xhat_dy_accessor = sum_xhat_dy.packed_accessor<accscalar_t, 1, at::RestrictPtrTraits, index_t>();
-  auto weight_accessor = packed_accessor_or_dummy<scalar_t, 1, at::RestrictPtrTraits, index_t>(weight);
+  auto weight_accessor = packed_accessor_or_dummy<prmscalar_t, 1, at::RestrictPtrTraits, index_t>(weight);
 
   // Kernel parameters
   auto stream = at::cuda::getCurrentCUDAStream();
@@ -214,7 +215,7 @@ at::Tensor backward_template(const at::Tensor& xhat_, const at::Tensor& dy_, con
   dim3 threads(tf, tb);
 
   // Invoke kernel
-  backward_kernel<scalar_t, accscalar_t, index_t><<<blocks, threads, 0, stream>>>(
+  backward_kernel<scalar_t, accscalar_t, prmscalar_t, index_t><<<blocks, threads, 0, stream>>>(
       xhat_accessor, dy_accessor, dx_accessor, var_accessor, count_accessor, sum_dy_accessor, sum_xhat_dy_accessor,
       weight_accessor, eps);
 
@@ -249,11 +250,13 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> reduce_statistics_cuda(
 void forward_cuda(at::Tensor& x, const at::Tensor& mean, const at::Tensor& var,
                   const c10::optional<at::Tensor>& weight, const c10::optional<at::Tensor>& bias,
                   float eps, Activation activation, float activation_param) {
-  AT_DISPATCH_FLOATING_TYPES_AND_HALF(x.scalar_type(), "forward_cuda", [&] {
+  const auto& w_scalar_type = weight.has_value() ? weight.value().scalar_type() : x.scalar_type();
+
+  DOUBLE_DISPATCH(x.scalar_type(), w_scalar_type, "forward_cuda", [&] {
     if (at::cuda::detail::canUse32BitIndexMath(x)) {
-      forward_template<scalar_t, int32_t>(x, mean, var, weight, bias, eps, activation, activation_param);
+      forward_template<scalar_t, prmscalar_t, int32_t>(x, mean, var, weight, bias, eps, activation, activation_param);
     } else {
-      forward_template<scalar_t, int64_t>(x, mean, var, weight, bias, eps, activation, activation_param);
+      forward_template<scalar_t, prmscalar_t, int64_t>(x, mean, var, weight, bias, eps, activation, activation_param);
     }
   });
 }
@@ -261,12 +264,14 @@ void forward_cuda(at::Tensor& x, const at::Tensor& mean, const at::Tensor& var,
 std::tuple<at::Tensor, at::Tensor> backward_reduce_cuda(
     at::Tensor& y_act, at::Tensor& dy_act, const c10::optional<at::Tensor>& weight,
     const c10::optional<at::Tensor>& bias, float eps, Activation activation, float activation_param) {
-  return AT_DISPATCH_FLOATING_TYPES_AND_HALF(y_act.scalar_type(), "backward_reduce_cuda", [&] {
+  const auto& w_scalar_type = weight.has_value() ? weight.value().scalar_type() : y_act.scalar_type();
+
+  return DOUBLE_DISPATCH(y_act.scalar_type(), w_scalar_type, "backward_reduce_cuda", [&] {
     if (at::cuda::detail::canUse32BitIndexMath(y_act)) {
-      return backward_reduce_template<scalar_t, int32_t>(
+      return backward_reduce_template<scalar_t, prmscalar_t, int32_t>(
           y_act, dy_act, weight, bias, eps, activation, activation_param);
     } else {
-      return backward_reduce_template<scalar_t, int64_t>(
+      return backward_reduce_template<scalar_t, prmscalar_t, int64_t>(
           y_act, dy_act, weight, bias, eps, activation, activation_param);
     }
   });
@@ -275,11 +280,13 @@ std::tuple<at::Tensor, at::Tensor> backward_reduce_cuda(
 at::Tensor backward_cuda(const at::Tensor& xhat, const at::Tensor& dy, const at::Tensor& var, const at::Tensor& count,
                          const at::Tensor& sum_dy, const at::Tensor& sum_xhat_dy,
                          const c10::optional<at::Tensor>& weight, float eps) {
-  return AT_DISPATCH_FLOATING_TYPES_AND_HALF(xhat.scalar_type(), "backward_cuda", [&] {
+  const auto& w_scalar_type = weight.has_value() ? weight.value().scalar_type() : xhat.scalar_type();
+
+  return DOUBLE_DISPATCH(xhat.scalar_type(), w_scalar_type, "backward_cuda", [&] {
     if (at::cuda::detail::canUse32BitIndexMath(xhat)) {
-      return backward_template<scalar_t, int32_t>(xhat, dy, var, count, sum_dy, sum_xhat_dy, weight, eps);
+      return backward_template<scalar_t, prmscalar_t, int32_t>(xhat, dy, var, count, sum_dy, sum_xhat_dy, weight, eps);
     } else {
-      return backward_template<scalar_t, int64_t>(xhat, dy, var, count, sum_dy, sum_xhat_dy, weight, eps);
+      return backward_template<scalar_t, prmscalar_t, int64_t>(xhat, dy, var, count, sum_dy, sum_xhat_dy, weight, eps);
     }
   });
 }

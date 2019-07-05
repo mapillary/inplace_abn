@@ -125,13 +125,13 @@ __global__ void reduce_statistics_kernel(
   }
 }
 
-template<typename scalar_t, typename accscalar_t, typename index_t, Activation activation>
+template<typename scalar_t, typename accscalar_t, typename prmscalar_t, typename index_t, Activation activation>
 __global__ void forward_kernel(
     at::PackedTensorAccessor<scalar_t, 3, at::RestrictPtrTraits, index_t> x,
     const at::PackedTensorAccessor<accscalar_t, 1, at::RestrictPtrTraits, index_t> mean_,
     const at::PackedTensorAccessor<accscalar_t, 1, at::RestrictPtrTraits, index_t> var,
-    const at::PackedTensorAccessor<scalar_t, 1, at::RestrictPtrTraits, index_t> weight_,
-    const at::PackedTensorAccessor<scalar_t, 1, at::RestrictPtrTraits, index_t> bias_,
+    const at::PackedTensorAccessor<prmscalar_t, 1, at::RestrictPtrTraits, index_t> weight_,
+    const at::PackedTensorAccessor<prmscalar_t, 1, at::RestrictPtrTraits, index_t> bias_,
     float eps_, float activation_param) {
   index_t c = blockIdx.x;
   if (c >= x.size(1)) return;
@@ -186,12 +186,12 @@ struct GradOp {
   const float activation_param;
 };
 
-template<typename scalar_t, typename accscalar_t, typename index_t, Activation activation>
+template<typename scalar_t, typename accscalar_t, typename prmscalar_t, typename index_t, Activation activation>
 __global__ void backward_reduce_kernel(
     at::PackedTensorAccessor<scalar_t, 3, at::RestrictPtrTraits, index_t> y_act,
     at::PackedTensorAccessor<scalar_t, 3, at::RestrictPtrTraits, index_t> dy_act,
-    const at::PackedTensorAccessor<scalar_t, 1, at::RestrictPtrTraits, index_t> weight,
-    const at::PackedTensorAccessor<scalar_t, 1, at::RestrictPtrTraits, index_t> bias,
+    const at::PackedTensorAccessor<prmscalar_t, 1, at::RestrictPtrTraits, index_t> weight,
+    const at::PackedTensorAccessor<prmscalar_t, 1, at::RestrictPtrTraits, index_t> bias,
     at::PackedTensorAccessor<accscalar_t, 1, at::RestrictPtrTraits, index_t> sum_dy,
     at::PackedTensorAccessor<accscalar_t, 1, at::RestrictPtrTraits, index_t> sum_xhat_dy,
     float eps_, float activation_param) {
@@ -214,7 +214,7 @@ __global__ void backward_reduce_kernel(
   }
 }
 
-template<typename scalar_t, typename accscalar_t, typename index_t>
+template<typename scalar_t, typename accscalar_t, typename prmscalar_t, typename index_t>
 __global__ void backward_kernel(
     const at::PackedTensorAccessor<scalar_t, 3, at::RestrictPtrTraits, index_t> xhat,
     const at::PackedTensorAccessor<scalar_t, 3, at::RestrictPtrTraits, index_t> dy,
@@ -223,7 +223,7 @@ __global__ void backward_kernel(
     const at::PackedTensorAccessor<int64_t, 1, at::RestrictPtrTraits, index_t> count,
     const at::PackedTensorAccessor<accscalar_t, 1, at::RestrictPtrTraits, index_t> sum_dy,
     const at::PackedTensorAccessor<accscalar_t, 1, at::RestrictPtrTraits, index_t> sum_xhat_dy,
-    const at::PackedTensorAccessor<scalar_t, 1, at::RestrictPtrTraits, index_t> weight_,
+    const at::PackedTensorAccessor<prmscalar_t, 1, at::RestrictPtrTraits, index_t> weight_,
     float eps_) {
   index_t c = blockIdx.x;
   if (c >= xhat.size(1)) return;
