@@ -32,7 +32,7 @@ class DeeplabV3(nn.Module):
         self.pool_red_conv = nn.Conv2d(hidden_channels, out_channels, 1, bias=False)
         self.red_bn = norm_act(out_channels)
 
-        self.reset_parameters(self.map_bn.activation, self.map_bn.slope)
+        self.reset_parameters(self.map_bn.activation, self.map_bn.activation_param)
 
     def reset_parameters(self, activation, slope):
         gain = nn.init.calculate_gain(activation, slope)

@@ -203,7 +203,7 @@ def load_snapshot(snapshot_file):
     print("--- Loading model from snapshot")
 
     # Create network
-    norm_act = partial(InPlaceABN, activation="leaky_relu", slope=.01)
+    norm_act = partial(InPlaceABN, activation="leaky_relu", activation_param=.01)
     body = models.__dict__["net_wider_resnet38_a2"](norm_act=norm_act, dilation=(1, 2, 4, 4))
     head = DeeplabV3(4096, 256, 256, norm_act=norm_act, pooling_size=(84, 84))
 
