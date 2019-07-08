@@ -48,11 +48,11 @@ The parametrization for the scaling factor of BN changed compared to standard BN
 
 To install PyTorch, please refer to https://github.com/pytorch/pytorch#installation.
 
-**NOTE: our code _requires_ PyTorch v1.0 or later**.
+**NOTE: our code _requires_ PyTorch v1.1 or later**.
 
 To install the package containing the iABN layers:
 ```bash
-pip install git+https://github.com/mapillary/inplace_abn.git@v1.0.1
+pip install git+https://github.com/mapillary/inplace_abn.git@v1.0.2
 ```
 Note that some parts of InPlace-ABN have native C++/CUDA implementations, meaning that the command above will need to
 compile them.
