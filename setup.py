@@ -1,14 +1,17 @@
 from os import path, listdir
 
 import setuptools
-from torch.utils.cpp_extension import BuildExtension, CUDAExtension
+import torch
+from torch.utils.cpp_extension import BuildExtension, CUDAExtension, CppExtension
 
 
-def find_sources(root_dir):
+def find_sources(root_dir, with_cuda=True):
+    extensions = [".cpp", ".cu"] if with_cuda else [".cpp"]
+
     sources = []
     for file in listdir(root_dir):
         _, ext = path.splitext(file)
-        if ext in [".cpp", ".cu"]:
+        if ext in extensions:
             sources.append(path.join(root_dir, file))
 
     return sources
@@ -18,6 +21,29 @@ here = path.abspath(path.dirname(__file__))
 
 with open(path.join(here, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
+
+if torch.cuda.is_available():
+    ext_modules = [
+        CUDAExtension(
+            name="inplace_abn._backend",
+            sources=find_sources("src"),
+            extra_compile_args={
+                "cxx": ["-O3"],
+                "nvcc": []
+            },
+            include_dirs=["include/"],
+            define_macros=[("WITH_CUDA", 1)]
+        )
+    ]
+else:
+    ext_modules = [
+        CppExtension(
+            name="inplace_abn._backend",
+            sources=find_sources("src", False),
+            extra_compile_args=["-O3"],
+            include_dirs=["include/"]
+        )
+    ]
 
 setuptools.setup(
     # Meta-data
@@ -45,16 +71,6 @@ setuptools.setup(
 
     # Package description
     packages=["inplace_abn"],
-    ext_modules=[
-        CUDAExtension(
-            name="inplace_abn._backend",
-            sources=find_sources("src"),
-            extra_compile_args={
-                "cxx": ["-O3"],
-                "nvcc": []
-            },
-            include_dirs=["include/"],
-        )
-    ],
+    ext_modules=ext_modules,
     cmdclass={"build_ext": BuildExtension}
 )

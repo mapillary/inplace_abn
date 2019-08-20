@@ -33,3 +33,19 @@
         AT_ERROR(#NAME, " not implemented for '", toString(x_type), "'");    \
     }                                                                        \
 }()
+
+#ifdef WITH_CUDA
+#define CUDA_DISPATCH(REF_TENSOR, METHOD, ...) \
+  if ((REF_TENSOR).is_cuda()) {                \
+    return METHOD ## _cuda(__VA_ARGS__);       \
+  } else {                                     \
+    return METHOD ## _cpu(__VA_ARGS__);        \
+  }
+#else
+#define CUDA_DISPATCH(REF_TENSOR, METHOD, ...)                \
+  if ((REF_TENSOR).is_cuda()) {                               \
+    AT_ERROR("CUDA support was not enabled at compile time"); \
+  } else {                                                    \
+    return METHOD ## _cpu(__VA_ARGS__);                       \
+  }
+#endif

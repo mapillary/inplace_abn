@@ -6,6 +6,7 @@
 #include "inplace_abn.h"
 #include "checks.h"
 #include "utils.h"
+#include "dispatch.h"
 
 /***********************************************************************************************************************
  * Exposed methods
@@ -14,13 +15,10 @@
 std::tuple<at::Tensor, at::Tensor, at::Tensor> statistics(const at::Tensor& x) {
   AT_CHECK(x.ndimension() >= 2, "x should have at least 2 dimensions");
 
-  if (x.is_cuda()) {
-    return statistics_cuda(x);
-  } else {
-    return statistics_cpu(x);
-  }
+  CUDA_DISPATCH(x, statistics, x)
 }
 
+#ifdef WITH_CUDA
 std::tuple<at::Tensor, at::Tensor, at::Tensor> reduce_statistics(
     const at::Tensor& all_mean, const at::Tensor& all_var, const at::Tensor& all_count) {
   // Inputs shouldn't be half
@@ -44,6 +42,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> reduce_statistics(
 
   return reduce_statistics_cuda(all_mean, all_var, all_count);
 }
+#endif
 
 void forward(at::Tensor& x, const at::Tensor& mean, const at::Tensor& var,
              const c10::optional<at::Tensor>& weight, const c10::optional<at::Tensor>& bias,
@@ -62,11 +61,7 @@ void forward(at::Tensor& x, const at::Tensor& mean, const at::Tensor& var,
   AT_CHECK((weight.has_value() && bias.has_value()) || (!weight.has_value() && !bias.has_value()),
       "weight and bias must be equally present or not present");
 
-  if (x.is_cuda()) {
-    forward_cuda(x, mean, var, weight, bias, eps, activation, activation_param);
-  } else {
-    forward_cpu(x, mean, var, weight, bias, eps, activation, activation_param);
-  }
+  CUDA_DISPATCH(x, forward, x, mean, var, weight, bias, eps, activation, activation_param)
 }
 
 std::tuple<at::Tensor, at::Tensor> backward_reduce(
@@ -88,11 +83,7 @@ std::tuple<at::Tensor, at::Tensor> backward_reduce(
   AT_CHECK((weight.has_value() && bias.has_value()) || (!weight.has_value() && !bias.has_value()),
       "weight and bias must be equally present or not present");
 
-  if (y_act.is_cuda()) {
-    return backward_reduce_cuda(y_act, dy_act, weight, bias, eps, activation, activation_param);
-  } else {
-    return backward_reduce_cpu(y_act, dy_act, weight, bias, eps, activation, activation_param);
-  }
+  CUDA_DISPATCH(y_act, backward_reduce, y_act, dy_act, weight, bias, eps, activation, activation_param)
 }
 
 at::Tensor backward(const at::Tensor& xhat, const at::Tensor& dy, const at::Tensor& var, const at::Tensor& count,
@@ -111,11 +102,7 @@ at::Tensor backward(const at::Tensor& xhat, const at::Tensor& dy, const at::Tens
     AT_CHECK(is_compatible_weight(xhat, weight.value()),
         "weight is not compatible with xhat (wrong size or scalar type)");
 
-  if (xhat.is_cuda()) {
-    return backward_cuda(xhat, dy, var, count, sum_dy, sum_xhat_dy, weight, eps);
-  } else {
-    return backward_cpu(xhat, dy, var, count, sum_dy, sum_xhat_dy, weight, eps);
-  }
+  CUDA_DISPATCH(xhat, backward, xhat, dy, var, count, sum_dy, sum_xhat_dy, weight, eps)
 }
 
 at::Tensor backward_test(const at::Tensor& dy_, const at::Tensor& var, const c10::optional<at::Tensor>& weight,
@@ -148,7 +135,9 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
 
   // Forward methods
   m.def("statistics", &statistics, "Compute iABN statistics, i.e. mean, biased variance and sample count");
+#ifdef WITH_CUDA
   m.def("reduce_statistics", &reduce_statistics, "Reduce statistics from multiple GPUs");
+#endif
   m.def("forward", &forward, "iABN forward pass. This is an in-place operation w.r.t. x");
 
   // Backward methods
