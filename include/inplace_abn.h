@@ -70,13 +70,13 @@ struct ActivationFn<scalar_t, Activation::LeakyReLU> {
 template<typename scalar_t>
 struct ActivationFn<scalar_t, Activation::ELU> {
   static INLINE_HOST_DEVICE void forward(scalar_t& x, float activation_param) {
-    x = (x >= 0) ? x : static_cast<scalar_t>(activation_param * (std::exp(x) - 1));
+    x = (x >= 0) ? x : static_cast<scalar_t>(activation_param * (::exp(x) - 1));
   }
 
   static INLINE_HOST_DEVICE void backward(scalar_t& y_act, scalar_t& dy_act, float activation_param) {
     if (y_act < 0) {
       dy_act *= y_act + static_cast<scalar_t>(activation_param);
-      y_act = std::log1p(y_act / static_cast<scalar_t>(activation_param));
+      y_act = ::log1p(y_act / static_cast<scalar_t>(activation_param));
     }
   }
 };

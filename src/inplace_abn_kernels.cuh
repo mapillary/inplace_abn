@@ -139,8 +139,8 @@ __global__ void forward_kernel(
   // Cache channel-wise values
   accscalar_t eps = static_cast<accscalar_t>(eps_);
   accscalar_t mean = mean_[c];
-  accscalar_t inv_std = accscalar_t(1) / std::sqrt(var[c] + eps);
-  accscalar_t weight = weight_.size(0) > 0 ? std::abs(static_cast<accscalar_t>(weight_[c])) + eps : accscalar_t(1);
+  accscalar_t inv_std = accscalar_t(1) / ::sqrt(var[c] + eps);
+  accscalar_t weight = weight_.size(0) > 0 ? ::abs(static_cast<accscalar_t>(weight_[c])) + eps : accscalar_t(1);
   accscalar_t bias = bias_.size(0) > 0 ? static_cast<accscalar_t>(bias_[c]) : accscalar_t(0);
 
   index_t num = x.size(0);
@@ -201,7 +201,7 @@ __global__ void backward_reduce_kernel(
 
   accscalar_t eps = static_cast<accscalar_t>(eps_);
   accscalar_t inv_gamma = weight.size(0) > 0
-        ? accscalar_t(1) / (std::abs(static_cast<accscalar_t>(weight[c])) + eps)
+        ? accscalar_t(1) / (::abs(static_cast<accscalar_t>(weight[c])) + eps)
         : accscalar_t(1);
   accscalar_t beta = bias.size(0) > 0 ? static_cast<accscalar_t>(bias[c]) : accscalar_t(0);
 
@@ -231,8 +231,8 @@ __global__ void backward_kernel(
   // Cache channel-wise values
   accscalar_t eps = static_cast<accscalar_t>(eps_);
   accscalar_t mult = weight_.size(0) > 0
-      ? (std::abs(static_cast<accscalar_t>(weight_[c])) + eps) / std::sqrt(var[c] + eps)
-      : accscalar_t(1) / std::sqrt(var[c] + eps);
+      ? (::abs(static_cast<accscalar_t>(weight_[c])) + eps) / ::sqrt(var[c] + eps)
+      : accscalar_t(1) / ::sqrt(var[c] + eps);
 
   accscalar_t norm = accscalar_t(1) / static_cast<accscalar_t>(count[0]);
   accscalar_t mean_dy_c = sum_dy[c] * norm;
