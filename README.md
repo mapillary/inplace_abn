@@ -48,11 +48,13 @@ The parametrization for the scaling factor of BN changed compared to standard BN
 
 To install PyTorch, please refer to https://github.com/pytorch/pytorch#installation.
 
-**NOTE: our code _requires_ PyTorch v1.1 or later**.
+**NOTE 1: our code _requires_ PyTorch v1.1 or later**
+
+**NOTE 2: we are only able to provide support for Linux platforms and CUDA versions >= 10.0**
 
 To install the package containing the iABN layers:
 ```bash
-pip install git+https://github.com/mapillary/inplace_abn.git@v1.0.6
+pip install git+https://github.com/mapillary/inplace_abn.git@v1.0.7
 ```
 Note that some parts of InPlace-ABN have native C++/CUDA implementations, meaning that the command above will need to
 compile them.
@@ -196,14 +198,12 @@ The results on the test data written above were obtained by employing only scale
 
 ## Changelog
 
-**Update 05 Jul. 2019: version 1.0.1**
-- Restored support for float16 inputs with float32 `weight` and `bias`.
-
 **Update 04 Jul. 2019: version 1.0.0**
 - Complete rewrite of the CUDA code following the most recent native BN implementation from Pytorch
 - Improved synchronized BN implementation, correctly handling different per-GPU batch sizes and Pytorch distributed groups
 - The iABN layers are now packaged in an installable python library to simplify use in other projects
 - The Imagenet / Vistas scripts are still available in the `scripts` folder
+- Requires now PyTorch 1.1
 
 **Update 08 Jan. 2019:**
 - Enabled multiprocessing and inplace ABN synchronization over multiple processes (previously using threads). It now requires to use DistributedDataParallel instead of DataParallel
