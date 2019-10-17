@@ -73,8 +73,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> statistics_cpu(const at::Tensor& 
 
   auto x = normalize_shape(x_);
 
-  auto mean = x.mean({0, 2});
-  auto var = (x - normalize_shape(mean)).pow(2).mean({0, 2});
+  auto mean = x.mean(c10::IntArrayRef({0, 2}));
+  auto var = (x - normalize_shape(mean)).pow(2).mean(c10::IntArrayRef({0, 2}));
   auto count = at::full({1}, count_samples(x), x.options().dtype(at::ScalarType::Long));
 
   return std::make_tuple(mean, var, count);
