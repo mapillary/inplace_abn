@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as functional
 
 from .functions import *
+_default_group = distributed.group.WORLD if hasattr(distributed, "group") else None
 
 
 class ABN(nn.Module):
@@ -138,7 +139,7 @@ class InPlaceABNSync(ABN):
     """
 
     def __init__(self, num_features, eps=1e-5, momentum=0.1, affine=True, activation="leaky_relu",
-                 activation_param=0.01, group=distributed.group.WORLD):
+                 activation_param=0.01, group=_default_group):
         super(InPlaceABNSync, self).__init__(num_features, eps, momentum, affine, activation, activation_param)
         self.group = group
 
