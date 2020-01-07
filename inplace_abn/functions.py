@@ -106,6 +106,9 @@ class InPlaceABN(autograd.Function):
     def backward(ctx, dy_act):
         y_act, var, count, weight, bias = ctx.saved_tensors
 
+        # Create clones of y_act and dy_act, as the backend will modify them in-place
+        y_act, dy_act = y_act.clone(), dy_act.clone()
+
         # Call backward_reduce if we need to compute at least one of the gradients
         if any(ctx.needs_input_grad):
             sum_dy_local, sum_xhat_dy_local = _backend.backward_reduce(
