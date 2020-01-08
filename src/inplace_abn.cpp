@@ -64,8 +64,8 @@ void forward(at::Tensor& x, const at::Tensor& mean, const at::Tensor& var,
   CUDA_DISPATCH(x, forward, x, mean, var, weight, bias, eps, activation, activation_param)
 }
 
-std::tuple<at::Tensor, at::Tensor> backward_reduce(
-    at::Tensor& y_act, at::Tensor& dy_act, const c10::optional<at::Tensor>& weight,
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> backward_reduce(
+    const at::Tensor& y_act, const at::Tensor& dy_act, const c10::optional<at::Tensor>& weight,
     const c10::optional<at::Tensor>& bias, float eps, Activation activation, float activation_param) {
   // Check dimensions and types
   AT_CHECK(y_act.ndimension() >= 2, "y_act should have at least 2 dimensions");
@@ -86,9 +86,9 @@ std::tuple<at::Tensor, at::Tensor> backward_reduce(
   CUDA_DISPATCH(y_act, backward_reduce, y_act, dy_act, weight, bias, eps, activation, activation_param)
 }
 
-at::Tensor backward(const at::Tensor& xhat, const at::Tensor& dy, const at::Tensor& var, const at::Tensor& count,
-                    const at::Tensor& sum_dy, const at::Tensor& sum_xhat_dy, const c10::optional<at::Tensor>& weight,
-                    float eps) {
+void backward(const at::Tensor& xhat, at::Tensor& dy, const at::Tensor& var, const at::Tensor& count,
+              const at::Tensor& sum_dy, const at::Tensor& sum_xhat_dy, const c10::optional<at::Tensor>& weight,
+              float eps) {
   // Check dimensions and types
   AT_CHECK(xhat.ndimension() >= 2, "xhat should have at least 2 dimensions");
   AT_CHECK(have_same_dims(xhat, dy), "xhat and dy should have the same size");
@@ -141,9 +141,7 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("forward", &forward, "iABN forward pass. This is an in-place operation w.r.t. x");
 
   // Backward methods
-  m.def("backward_reduce", &backward_reduce,
-      "First step of the backward pass. This is an in-place operation w.r.t. y_act and dy_act, which are transformed "
-      "into xhat and dy, respectively.");
-  m.def("backward", &backward, "Second step of the backward pass");
+  m.def("backward_reduce", &backward_reduce, "First step of the backward pass");
+  m.def("backward", &backward, "Second step of the backward pass. This is an in-place operation w.r.t. dy");
   m.def("backward_test", &backward_test, "Second step of the backward pass, test mode");
 }

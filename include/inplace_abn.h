@@ -33,19 +33,19 @@ void forward_cuda(at::Tensor& x, const at::Tensor& mean, const at::Tensor& var,
                   const c10::optional<at::Tensor>& weight, const c10::optional<at::Tensor>& bias,
                   float eps, Activation activation, float activation_param);
 
-std::tuple<at::Tensor, at::Tensor> backward_reduce_cpu(
-    at::Tensor& y_act, at::Tensor& dy_act, const c10::optional<at::Tensor>& weight,
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> backward_reduce_cpu(
+    const at::Tensor& y_act, const at::Tensor& dy_act, const c10::optional<at::Tensor>& weight,
     const c10::optional<at::Tensor>& bias, float eps, Activation activation, float activation_param);
-std::tuple<at::Tensor, at::Tensor> backward_reduce_cuda(
-    at::Tensor& y_act, at::Tensor& dy_act, const c10::optional<at::Tensor>& weight,
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> backward_reduce_cuda(
+    const at::Tensor& y_act, const at::Tensor& dy_act, const c10::optional<at::Tensor>& weight,
     const c10::optional<at::Tensor>& bias, float eps, Activation activation, float activation_param);
 
-at::Tensor backward_cpu(const at::Tensor& xhat, const at::Tensor& dy, const at::Tensor& var, const at::Tensor& count,
-                        const at::Tensor& sum_dy, const at::Tensor& sum_xhat_dy,
-                        const c10::optional<at::Tensor>& weight, float eps);
-at::Tensor backward_cuda(const at::Tensor& xhat, const at::Tensor& dy, const at::Tensor& var, const at::Tensor& count,
-                         const at::Tensor& sum_dy, const at::Tensor& sum_xhat_dy,
-                         const c10::optional<at::Tensor>& weight, float eps);
+void backward_cpu(const at::Tensor& xhat, at::Tensor& dy, const at::Tensor& var, const at::Tensor& count,
+                  const at::Tensor& sum_dy, const at::Tensor& sum_xhat_dy,
+                  const c10::optional<at::Tensor>& weight, float eps);
+void backward_cuda(const at::Tensor& xhat, at::Tensor& dy, const at::Tensor& var, const at::Tensor& count,
+                   const at::Tensor& sum_dy, const at::Tensor& sum_xhat_dy,
+                   const c10::optional<at::Tensor>& weight, float eps);
 
 /***********************************************************************************************************************
  * Handling of activation functions
@@ -59,10 +59,14 @@ struct ActivationFn<scalar_t, Activation::LeakyReLU> {
     x = (x >= 0) ? x : static_cast<scalar_t>(x * activation_param);
   }
 
-  static INLINE_HOST_DEVICE void backward(scalar_t& y_act, scalar_t& dy_act, float activation_param) {
-    if (y_act < 0) {
-      y_act /= static_cast<scalar_t>(activation_param);
-      dy_act *= static_cast<scalar_t>(activation_param);
+  static INLINE_HOST_DEVICE void backward(scalar_t y_act, scalar_t dy_act, float activation_param,
+                                          scalar_t& y, scalar_t& dy) {
+    if (y_act >= 0) {
+      y = y_act;
+      dy = dy_act;
+    } else {
+      y = static_cast<scalar_t>(y_act / activation_param);
+      dy = static_cast<scalar_t>(dy_act * activation_param);
     }
   }
 };
@@ -73,10 +77,14 @@ struct ActivationFn<scalar_t, Activation::ELU> {
     x = (x >= 0) ? x : static_cast<scalar_t>(activation_param * (::exp(x) - 1));
   }
 
-  static INLINE_HOST_DEVICE void backward(scalar_t& y_act, scalar_t& dy_act, float activation_param) {
-    if (y_act < 0) {
-      dy_act *= y_act + static_cast<scalar_t>(activation_param);
-      y_act = ::log1p(y_act / static_cast<scalar_t>(activation_param));
+  static INLINE_HOST_DEVICE void backward(scalar_t y_act, scalar_t dy_act, float activation_param,
+                                          scalar_t& y, scalar_t& dy) {
+    if (y_act >= 0) {
+      y = y_act;
+      dy = dy_act;
+    } else {
+      y = ::log1p(static_cast<scalar_t>(y_act / activation_param));
+      dy = static_cast<scalar_t>(dy_act * (y_act + activation_param));
     }
   }
 };
@@ -85,5 +93,9 @@ template<typename scalar_t>
 struct ActivationFn<scalar_t, Activation::Identity> {
   static INLINE_HOST_DEVICE void forward(scalar_t& x, float activation_param) {}
 
-  static INLINE_HOST_DEVICE void backward(scalar_t& y_act, scalar_t& dy_act, float activation_param) {}
+  static INLINE_HOST_DEVICE void backward(scalar_t y_act, scalar_t dy_act, float activation_param,
+                                          scalar_t& y, scalar_t& dy) {
+    y = y_act;
+    dy = dy_act;
+  }
 };

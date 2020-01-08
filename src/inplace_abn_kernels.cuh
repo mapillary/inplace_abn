@@ -160,27 +160,32 @@ __global__ void forward_kernel(
 // Functor used in the backward_reduce kernel
 template <typename scalar_t, typename accscalar_t, typename PTA, Activation activation>
 struct GradOp {
-  __device__ GradOp(PTA& y_act, PTA& dy_act, accscalar_t inv_gamma, accscalar_t beta, float activation_param)
-    : y_act(y_act), dy_act(dy_act), inv_gamma(inv_gamma), beta(beta), activation_param(activation_param) {}
+  __device__ GradOp(const PTA& y_act, const PTA& dy_act, PTA& xhat, PTA& dy,
+                    accscalar_t inv_gamma, accscalar_t beta, float activation_param)
+    : y_act(y_act), dy_act(dy_act), xhat(xhat), dy(dy), inv_gamma(inv_gamma), beta(beta), activation_param(activation_param) {}
 
   __device__ __forceinline__ Float2<accscalar_t> operator()(int b, int c, int s) {
-    scalar_t& y_act_ = y_act[b][c][s];
-    scalar_t& dy_act_ = dy_act[b][c][s];
+    const scalar_t y_act_ = y_act[b][c][s];
+    const scalar_t dy_act_ = dy_act[b][c][s];
+    scalar_t& xhat_ = xhat[b][c][s];
+    scalar_t& dy_ = dy[b][c][s];
 
     // Invert activation
-    ActivationFn<scalar_t, activation>::backward(y_act_, dy_act_, activation_param);
+    ActivationFn<scalar_t, activation>::backward(y_act_, dy_act_, activation_param, xhat_, dy_);
 
     // Invert affine transform
-    y_act_ = (y_act_ - beta) * inv_gamma;
+    xhat_ = (xhat_ - beta) * inv_gamma;
 
     // Accumulate
-    accscalar_t xhat = static_cast<accscalar_t>(y_act_);
-    accscalar_t dy = static_cast<accscalar_t>(dy_act_);
-    return Float2<accscalar_t>(dy, xhat * dy);
+    accscalar_t xhat_accscalar = static_cast<accscalar_t>(xhat_);
+    accscalar_t dy_accscalar = static_cast<accscalar_t>(dy_);
+    return Float2<accscalar_t>(dy_accscalar, xhat_accscalar * dy_accscalar);
   }
 
-  PTA& y_act;
-  PTA& dy_act;
+  const PTA& y_act;
+  const PTA& dy_act;
+  PTA& xhat;
+  PTA& dy;
   const accscalar_t inv_gamma;
   const accscalar_t beta;
   const float activation_param;
@@ -188,10 +193,12 @@ struct GradOp {
 
 template<typename scalar_t, typename accscalar_t, typename prmscalar_t, typename index_t, Activation activation>
 __global__ void backward_reduce_kernel(
-    at::PackedTensorAccessor<scalar_t, 3, at::RestrictPtrTraits, index_t> y_act,
-    at::PackedTensorAccessor<scalar_t, 3, at::RestrictPtrTraits, index_t> dy_act,
+    const at::PackedTensorAccessor<scalar_t, 3, at::RestrictPtrTraits, index_t> y_act,
+    const at::PackedTensorAccessor<scalar_t, 3, at::RestrictPtrTraits, index_t> dy_act,
     const at::PackedTensorAccessor<prmscalar_t, 1, at::RestrictPtrTraits, index_t> weight,
     const at::PackedTensorAccessor<prmscalar_t, 1, at::RestrictPtrTraits, index_t> bias,
+    at::PackedTensorAccessor<scalar_t, 3, at::RestrictPtrTraits, index_t> xhat,
+    at::PackedTensorAccessor<scalar_t, 3, at::RestrictPtrTraits, index_t> dy,
     at::PackedTensorAccessor<accscalar_t, 1, at::RestrictPtrTraits, index_t> sum_dy,
     at::PackedTensorAccessor<accscalar_t, 1, at::RestrictPtrTraits, index_t> sum_xhat_dy,
     float eps_, float activation_param) {
@@ -205,7 +212,7 @@ __global__ void backward_reduce_kernel(
         : accscalar_t(1);
   accscalar_t beta = bias.size(0) > 0 ? static_cast<accscalar_t>(bias[c]) : accscalar_t(0);
 
-  gradop_t gop(y_act, dy_act, inv_gamma, beta, activation_param);
+  gradop_t gop(y_act, dy_act, xhat, dy, inv_gamma, beta, activation_param);
   Float2<accscalar_t> res = reduce<Float2<accscalar_t>, gradop_t, pta_t>(gop, y_act, c);
 
   if (threadIdx.x == 0) {
@@ -217,8 +224,7 @@ __global__ void backward_reduce_kernel(
 template<typename scalar_t, typename accscalar_t, typename prmscalar_t, typename index_t>
 __global__ void backward_kernel(
     const at::PackedTensorAccessor<scalar_t, 3, at::RestrictPtrTraits, index_t> xhat,
-    const at::PackedTensorAccessor<scalar_t, 3, at::RestrictPtrTraits, index_t> dy,
-    const at::PackedTensorAccessor<scalar_t, 3, at::RestrictPtrTraits, index_t> dx,
+    at::PackedTensorAccessor<scalar_t, 3, at::RestrictPtrTraits, index_t> dy,
     const at::PackedTensorAccessor<accscalar_t, 1, at::RestrictPtrTraits, index_t> var,
     const at::PackedTensorAccessor<int64_t, 1, at::RestrictPtrTraits, index_t> count,
     const at::PackedTensorAccessor<accscalar_t, 1, at::RestrictPtrTraits, index_t> sum_dy,
@@ -245,10 +251,9 @@ __global__ void backward_kernel(
   for (index_t n = threadIdx.y + blockIdx.y * blockDim.y; n < num; n += step) {
     auto xhat_nc = xhat[n][c];
     auto dy_nc = dy[n][c];
-    auto dx_nc = dx[n][c];
 
     for (index_t s = threadIdx.x; s < sp; s += blockDim.x) {
-      dx_nc[s] = static_cast<scalar_t>(mult * (
+      dy_nc[s] = static_cast<scalar_t>(mult * (
           static_cast<accscalar_t>(dy_nc[s]) - mean_dy_c - static_cast<accscalar_t>(xhat_nc[s]) * mean_xhat_dy_c));
     }
   }
