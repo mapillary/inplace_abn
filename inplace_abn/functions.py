@@ -123,7 +123,7 @@ class InPlaceABN(autograd.Function):
         if ctx.needs_input_grad[0]:
             if ctx.training:
                 # This overwrites dy with dx
-                _backend.backward(xhat, dy, var, count, sum_dy, sum_xhat_dy, weight, ctx.eps)
+                _backend.backward_train(xhat, dy, var, count, sum_dy, sum_xhat_dy, weight, ctx.eps)
                 dx = dy
             else:
                 dx = _backend.backward_test(dy_act, var, weight, ctx.eps)

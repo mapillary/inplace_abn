@@ -2,10 +2,16 @@
 
 #include <ATen/ATen.h>
 
-#define CHECK_CUDA(x) AT_CHECK((x).is_cuda(), #x " must be a CUDA tensor")
-#define CHECK_CPU(x) AT_CHECK(!(x).is_cuda(), #x " must be a CPU tensor")
-#define CHECK_NOT_HALF(x) AT_CHECK((x).scalar_type() != at::ScalarType::Half, #x " can't have type Half")
-#define CHECK_SAME_TYPE(x, y) AT_CHECK((x).scalar_type() == (y).scalar_type(), #x " and " #y " must have the same scalar type")
+#ifdef TORCH_CHECK
+#define IABN_CHECK TORCH_CHECK
+#else
+#define IABN_CHECK AT_CHECK
+#endif
+
+#define CHECK_CUDA(x) IABN_CHECK((x).is_cuda(), #x " must be a CUDA tensor")
+#define CHECK_CPU(x) IABN_CHECK(!(x).is_cuda(), #x " must be a CPU tensor")
+#define CHECK_NOT_HALF(x) IABN_CHECK((x).scalar_type() != at::ScalarType::Half, #x " can't have type Half")
+#define CHECK_SAME_TYPE(x, y) IABN_CHECK((x).scalar_type() == (y).scalar_type(), #x " and " #y " must have the same scalar type")
 
 inline bool have_same_dims(const at::Tensor& x, const at::Tensor& y) {
   bool success = x.ndimension() == y.ndimension();
