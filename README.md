@@ -52,6 +52,8 @@ To install PyTorch, please refer to https://github.com/pytorch/pytorch#installat
 
 **NOTE 2: we are only able to provide support for Linux platforms and CUDA versions >= 10.0**
 
+**NOTE 3: in general, it is not possible to load weights from a network trained with standard BN into an InPlace-ABN network without severe performance degradation, due to the different handling of BN scaling parameters**
+
 To install the package containing the iABN layers:
 ```bash
 pip install git+https://github.com/mapillary/inplace_abn.git@v1.0.11
