@@ -56,7 +56,7 @@ To install PyTorch, please refer to https://github.com/pytorch/pytorch#installat
 
 To install the package containing the iABN layers:
 ```bash
-pip install git+https://github.com/mapillary/inplace_abn.git@v1.0.11
+pip install git+https://github.com/mapillary/inplace_abn.git@v1.0.12
 ```
 Note that some parts of InPlace-ABN have native C++/CUDA implementations, meaning that the command above will need to
 compile them.

@@ -31,7 +31,7 @@ if torch.has_cuda:
                 "cxx": ["-O3"],
                 "nvcc": []
             },
-            include_dirs=["include/"],
+            include_dirs=[path.join(here, "include")],
             define_macros=[("WITH_CUDA", 1)]
         )
     ]
@@ -41,7 +41,7 @@ else:
             name="inplace_abn._backend",
             sources=find_sources("src", False),
             extra_compile_args=["-O3"],
-            include_dirs=["include/"]
+            include_dirs=[path.join(here, "include")]
         )
     ]
 

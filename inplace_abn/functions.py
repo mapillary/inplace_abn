@@ -99,11 +99,13 @@ class InPlaceABN(autograd.Function):
 
         # Save for backward
         ctx.save_for_backward(x, var, count, weight, bias)
-        return x
+
+        ctx.mark_non_differentiable(running_mean, running_var)
+        return x, running_mean, running_var
 
     @staticmethod
     @once_differentiable
-    def backward(ctx, dy_act):
+    def backward(ctx, dy_act, _drunning_mean, _drunning_var):
         y_act, var, count, weight, bias = ctx.saved_tensors
 
         # Call backward_reduce if we need to compute at least one of the gradients

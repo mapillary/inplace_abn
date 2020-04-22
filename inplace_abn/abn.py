@@ -109,8 +109,9 @@ class InPlaceABN(ABN):
         super(InPlaceABN, self).__init__(num_features, eps, momentum, affine, activation, activation_param)
 
     def forward(self, x):
-        return inplace_abn(x, self.weight, self.bias, self.running_mean, self.running_var,
-                           self.training, self.momentum, self.eps, self.activation, self.activation_param)
+        x, _, _ = inplace_abn(x, self.weight, self.bias, self.running_mean, self.running_var,
+                              self.training, self.momentum, self.eps, self.activation, self.activation_param)
+        return x
 
 
 class InPlaceABNSync(ABN):
@@ -147,6 +148,7 @@ class InPlaceABNSync(ABN):
         self.group = group
 
     def forward(self, x):
-        return inplace_abn_sync(
+        x, _, _ = inplace_abn_sync(
             x, self.weight, self.bias, self.running_mean, self.running_var, self.training, self.momentum, self.eps,
             self.activation, self.activation_param, self.group)
+        return x
