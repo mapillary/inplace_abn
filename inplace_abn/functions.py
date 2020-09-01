@@ -3,6 +3,7 @@ import torch.distributed as distributed
 from torch.autograd.function import once_differentiable
 
 from . import _backend
+_default_group = distributed.group.WORLD if hasattr(distributed, "group") else None
 
 
 def _activation_from_name(activation):
@@ -156,7 +157,7 @@ def inplace_abn(x, weight, bias, running_mean, running_var,
 
 def inplace_abn_sync(x, weight, bias, running_mean, running_var,
                      training=True, momentum=0.1, eps=1e-05, activation="leaky_relu", activation_param=0.01,
-                     group=distributed.group.WORLD):
+                     group=_default_group):
     return InPlaceABN.apply(x, weight, bias, running_mean, running_var,
                             training, momentum, eps, activation, activation_param, group)
 
