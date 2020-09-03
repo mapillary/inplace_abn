@@ -56,7 +56,7 @@ To install PyTorch, please refer to https://github.com/pytorch/pytorch#installat
 
 To install the package containing the iABN layers:
 ```bash
-pip install git+https://github.com/mapillary/inplace_abn.git@v1.0.12
+pip install inplace_abn
 ```
 Note that some parts of InPlace-ABN have native C++/CUDA implementations, meaning that the command above will need to
 compile them.
@@ -74,7 +74,7 @@ The last of the commands above will install some additional libraries required b
 
 ## Training on ImageNet-1k
 
-Here you can find the results from our arXiv paper (top-1 / top-5 scores) with corresponding, trained models and md5 checksums, respectively. The model files provided below are made available under the [license attached to ImageNet](http://www.image-net.org/download-faq). 
+Here you can find the results from our arXiv paper (top-1 / top-5 scores) with corresponding, trained models and md5 checksums, respectively. The model files provided below are made available under the [license attached to ImageNet](http://www.image-net.org/download-faq).
 
 | Network                           | Batch | 224            | 224, 10-crops  | 320           |       Trained models (+md5)      |
 |-----------------------------------|-------|----------------|----------------|---------------|----------------------------------|
@@ -87,7 +87,7 @@ Here you can find the results from our arXiv paper (top-1 / top-5 scores) with c
 | [ResNet50v1, InPlace-ABN sync][13]  | 512   | 75.53 / 92.59  | 77.04 / 93.57  | 76.60 / 93.49 | [`2522ca639f7fdfd7c0089ba1f5f6c2e8`][14] |
 | [ResNet34v1, InPlace-ABN sync][15]  | 512   | 73.27 / 91.34  | 75.19 / 92.66  | 74.87 / 92.42 | [`61515c1484911c3cc753d405131e1dda`][16] |
 | [ResNet101v1, InPlace-ABN sync][17]  | 512   | 77.07 / 93.45  | 78.58 / 94.40  | 78.25 / 94.19 | [`1552ae0f3d610108df702135f56bd27b`][18] |
-  
+
 [1]: scripts/experiments/resnext101_stdbn_lr_256.json
 [2]: scripts/experiments/resnext101_ipabn_lr_512.json
 [3]: scripts/experiments/resnext152_ipabn_lr_256.json
@@ -125,7 +125,7 @@ root/val/[class_id2]/__32_.{jpg,png,jpeg}
 Images can have any name, as long as the extension is that of a recognized image format.
 Class ids are also free-form, but they are expected to match between train and validation data.
 Note that the training data in the standard ImageNet distribution is already given in the required format, while
-validation images need to be split into class sub-folders as described above.  
+validation images need to be split into class sub-folders as described above.
 
 ### Training
 
@@ -167,7 +167,7 @@ We have successfully used InPlace-ABN with a DeepLab3 segmentation head that was
 model above.
 Due to InPlace-ABN, we can significantly increase the amount of input data to this model, which eventually allowed us to
 obtain #1 positions on [Cityscapes](https://www.cityscapes-dataset.com/benchmarks/#scene-labeling-task),
-[Mapillary Vistas](https://eval-vistas.mapillary.com/featured-challenges/1/leaderboard/1), [AutoNUE](http://cvit.iiit.ac.in/scene-understanding-challenge-2018/benchmarks.php), 
+[Mapillary Vistas](https://eval-vistas.mapillary.com/featured-challenges/1/leaderboard/1), [AutoNUE](http://cvit.iiit.ac.in/scene-understanding-challenge-2018/benchmarks.php),
 [Kitti](http://www.cvlibs.net/datasets/kitti/eval_semseg.php?benchmark=semantics2015) and
 [ScanNet](http://dovahkiin.stanford.edu/adai/semantic_label) segmentation leaderboards.
 The training settings mostly follow the description in our [paper](https://arxiv.org/abs/1712.02616).
@@ -196,7 +196,7 @@ The script will process all `.png`, `.jpg` and `.jpeg` images from the input fol
 output folder as `.png` images.
 For additional options, _e.g._ test time augmentation, please consult the script's help message.
 
-The results on the test data written above were obtained by employing only scale 1.0 + flipping. 
+The results on the test data written above were obtained by employing only scale 1.0 + flipping.
 
 ## Changelog
 
