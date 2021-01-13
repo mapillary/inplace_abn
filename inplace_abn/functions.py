@@ -1,4 +1,5 @@
-from typing import Optional
+from typing import Optional, Any
+from warnings import warn
 
 import torch
 import torch.autograd as autograd
@@ -28,38 +29,30 @@ def _count_samples(x):
 
 class InPlaceABN(autograd.Function):
     @staticmethod
-    def _gather_values(*tensors, group, world_size):
-        # Start gather operations asynchronously
-        gathered, gather_ops = [], []
-        for t in tensors:
-            t_all = t.new_empty(world_size, *t.shape)
-            t_op = distributed.all_gather(
-                list(t_all.unbind(0)), t, group=group, async_op=True
-            )
-
-            gathered.append(t_all)
-            gather_ops.append(t_op)
-
-        # Wait
-        for op in gather_ops:
-            op.wait()
-
-        # Return results
-        return tuple(gathered)
-
-    @staticmethod
     def _reduce_forward(mean, var, count, group, world_size):
-        all_mean, all_var, all_count = InPlaceABN._gather_values(
-            mean, var, count, group=group, world_size=world_size
+        # Mean and variance
+        mean_var = torch.cat([mean, var], dim=0)
+        all_mean_var = mean_var.new_empty(world_size, mean_var.numel())
+        distributed.all_gather(
+            list(all_mean_var.unbind(0)), mean_var, group=group, async_op=False
         )
+        all_mean, all_var = all_mean_var.split(mean.numel(), dim=1)
+
+        # Count
+        all_count = count.new_empty(world_size, 1)
+        distributed.all_gather(
+            list(all_count.unbind(0)), count, group=group, async_op=False
+        )
+
         return _backend.reduce_statistics(all_mean, all_var, all_count)
 
     @staticmethod
-    def _reduce_backward(sum_dy, sum_xhat_dy, group, world_size):
-        all_sum_dy, all_sum_xhat_dy = InPlaceABN._gather_values(
-            sum_dy, sum_xhat_dy, group=group, world_size=world_size
+    def _reduce_backward(sum_dy, sum_xhat_dy, group):
+        stacked = torch.cat([sum_dy, sum_xhat_dy], dim=0)
+        distributed.all_reduce(
+            stacked, distributed.ReduceOp.SUM, group=group, async_op=False
         )
-        return all_sum_dy.sum(dim=0), all_sum_xhat_dy.sum(dim=0)
+        return torch.split(stacked, sum_dy.numel(), dim=0)
 
     @staticmethod
     def forward(
@@ -75,6 +68,7 @@ class InPlaceABN(autograd.Function):
         activation="leaky_relu",
         activation_param=0.01,
         group=None,
+        world_size=1,
     ):
         # Save context
         ctx.training = training
@@ -83,21 +77,14 @@ class InPlaceABN(autograd.Function):
         ctx.activation = _activation_from_name(activation)
         ctx.activation_param = activation_param
         ctx.group = group
+        ctx.world_size = world_size
         ctx.has_running_stats = running_mean is not None and running_mean is not None
-
-        # Check if we really need to perform distributed operations
-        if ctx.group is not None:
-            ctx.distributed = True
-            ctx.world_size = distributed.get_world_size(group=group)
-        else:
-            ctx.distributed = False
-            ctx.world_size = 1
 
         if ctx.training:
             mean, var, count = _backend.statistics(x)
 
             # Gather stats from all workers if needed
-            if ctx.distributed:
+            if ctx.world_size > 1:
                 mean, var, count = InPlaceABN._reduce_forward(
                     mean, var, count, ctx.group, ctx.world_size
                 )
@@ -139,14 +126,14 @@ class InPlaceABN(autograd.Function):
                 ctx.activation_param,
             )
 
-            if ctx.distributed:
+            if ctx.world_size > 1:
                 sum_dy, sum_xhat_dy = InPlaceABN._reduce_backward(
-                    sum_dy_local, sum_xhat_dy_local, ctx.group, ctx.world_size
+                    sum_dy_local, sum_xhat_dy_local, ctx.group
                 )
             else:
                 sum_dy, sum_xhat_dy = sum_dy_local, sum_xhat_dy_local
         else:
-            return None, None, None, None, None, None, None, None, None, None
+            return (None,) * 12
 
         # Gradient w.r.t. x
         if ctx.needs_input_grad[0]:
@@ -174,7 +161,7 @@ class InPlaceABN(autograd.Function):
         else:
             dbias = None
 
-        return dx, dweight, dbias, None, None, None, None, None, None, None, None
+        return (dx, dweight, dbias) + (None,) * 9
 
 
 def inplace_abn(
@@ -247,6 +234,7 @@ def inplace_abn(
         activation,
         activation_param,
         None,
+        1,
     )
 
 
@@ -261,7 +249,7 @@ def inplace_abn_sync(
     eps: float = 1e-05,
     activation: str = "leaky_relu",
     activation_param: float = 0.01,
-    group=distributed.group.WORLD,
+    group: Optional[Any] = None,
 ):
     """InPlace Activated Batch Normalization with distributed synchronization
 
@@ -283,7 +271,7 @@ def inplace_abn_sync(
         activation: Name of the activation function, one of: `leaky_relu`, `elu` or `identity`
         activation_param: Negative slope for the `leaky_relu` activation or `alpha`
             parameter for the `elu` activation
-        group: Distributed group to synchronize with, default is WORLD
+        group: Distributed group to synchronize with, or `None` to use the default group
     """
     if training:
         samples = _count_samples(x)
@@ -293,19 +281,46 @@ def inplace_abn_sync(
                 "tensor only contains a single sample per channel"
             )
 
-    return InPlaceABN.apply(
-        x,
-        weight,
-        bias,
-        running_mean,
-        running_var,
-        training,
-        momentum,
-        eps,
-        activation,
-        activation_param,
-        group,
-    )
+    if distributed.is_initialized():
+        if group is None:
+            group = distributed.group.WORLD
+        world_size = distributed.get_world_size(group)
+
+        return InPlaceABN.apply(
+            x,
+            weight,
+            bias,
+            running_mean,
+            running_var,
+            training,
+            momentum,
+            eps,
+            activation,
+            activation_param,
+            group,
+            world_size,
+        )
+    else:
+        warn(
+            "inplace_abn_sync is being called, but torch.distributed is not initialized. "
+            "Reverting to non-synchronized inplace_abn.",
+            category=RuntimeWarning,
+        )
+
+        return InPlaceABN.apply(
+            x,
+            weight,
+            bias,
+            running_mean,
+            running_var,
+            training,
+            momentum,
+            eps,
+            activation,
+            activation_param,
+            None,
+            1,
+        )
 
 
 __all__ = ["inplace_abn", "inplace_abn_sync"]

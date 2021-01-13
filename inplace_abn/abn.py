@@ -1,7 +1,6 @@
-from typing import Optional
+from typing import Optional, Any
 
 import torch
-import torch.distributed as distributed
 import torch.nn as nn
 import torch.nn.functional as functional
 
@@ -230,7 +229,7 @@ class InPlaceABN(ABN):
             activation_param,
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         momentum, training = self._get_momentum_and_training()
         running_mean, running_var = self._get_running_stats()
 
@@ -270,7 +269,7 @@ class InPlaceABNSync(ABN):
             `elu` or `identity`
         activation_param: Negative slope for the `leaky_relu` activation or `alpha`
             parameter for the `elu` activation
-        group: Distributed group to synchronize with, default is WORLD
+        group: Distributed group to synchronize with, or `None` to use the default group
     """
 
     def __init__(
@@ -282,7 +281,7 @@ class InPlaceABNSync(ABN):
         track_running_stats: bool = True,
         activation: str = "leaky_relu",
         activation_param: float = 0.01,
-        group=distributed.group.WORLD,
+        group: Optional[Any] = None,
     ):
         super(InPlaceABNSync, self).__init__(
             num_features,
@@ -295,17 +294,17 @@ class InPlaceABNSync(ABN):
         )
         self.group = group
 
-    def set_group(self, group):
+    def set_group(self, group: Optional[Any]) -> None:
         """Set distributed group to synchronize with
 
         This function should never be called between forward and backward
 
         Args:
-            group: The new distributed group to synchronize with
+            group: Distributed group to synchronize with, or `None` to use the default group
         """
         self.group = group
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         momentum, training = self._get_momentum_and_training()
         running_mean, running_var = self._get_running_stats()
 
