@@ -72,6 +72,16 @@ pip install -r requirements.txt
 ```
 The last of the commands above will install some additional libraries required by the Imagenet / Vistas scripts.
 
+### Force compiling with CUDA
+
+In order to force the compilation of the native CUDA functions on systems that do not
+have access to a GPU (e.g. Docker containers), two environment variables have to be set:
+```bash
+export TORCH_CUDA_ARCH_LIST="{archs}"
+export IABN_FORCE_CUDA=1
+```
+where `{archs}` is a list of target CUDA architectures, e.g. `Pascal;Volta`, `6.0;6.5` etc.
+
 ## Training on ImageNet-1k
 
 Here you can find the results from our arXiv paper (top-1 / top-5 scores) with corresponding, trained models and md5 checksums, respectively. The model files provided below are made available under the [license attached to ImageNet](http://www.image-net.org/download-faq).
