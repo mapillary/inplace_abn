@@ -1,3 +1,5 @@
+// Copyright (c) Facebook, Inc. and its affiliates.
+
 #pragma once
 
 #include <ATen/ATen.h>
@@ -150,4 +152,3 @@ __device__ scalar_t reduce(Op op, PTA tensor, int plane) {
   // Everyone picks it up, should be broadcast into the whole grad_input
   return shared[0];
 }
-
