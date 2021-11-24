@@ -1,3 +1,5 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+
 import glob
 from itertools import chain
 from os import path
@@ -18,13 +20,15 @@ class SegmentationDataset(Dataset):
 
         # Find all images
         self.images = []
-        for img_path in chain(*(glob.iglob(path.join(self.in_dir, ext)) for ext in SegmentationDataset._EXTENSIONS)):
+        for img_path in chain(
+            *(
+                glob.iglob(path.join(self.in_dir, ext))
+                for ext in SegmentationDataset._EXTENSIONS
+            )
+        ):
             _, name_with_ext = path.split(img_path)
             idx, _ = path.splitext(name_with_ext)
-            self.images.append({
-                "idx": idx,
-                "path": img_path
-            })
+            self.images.append({"idx": idx, "path": img_path})
 
     def __len__(self):
         return len(self.images)

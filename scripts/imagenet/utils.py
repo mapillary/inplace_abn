@@ -1,3 +1,5 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+
 import time
 from functools import partial
 
@@ -6,30 +8,46 @@ import torch.distributed as dist
 import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
 import torchvision.transforms as transforms
-
 from inplace_abn import ABN, InPlaceABN, InPlaceABNSync
+
 from .transforms import ColorJitter, Lighting
 
 
 def _get_norm_act(network_config):
     if network_config["bn_mode"] == "standard":
-        assert network_config["activation"] in ("relu", "leaky_relu", "elu", "identity"), \
-            "Standard batch normalization is only compatible with relu, leaky_relu, elu and identity"
-        activation_fn = partial(ABN,
-                                activation=network_config["activation"],
-                                activation_param=network_config["activation_param"])
+        assert network_config["activation"] in (
+            "relu",
+            "leaky_relu",
+            "elu",
+            "identity",
+        ), "Standard batch normalization is only compatible with relu, leaky_relu, elu and identity"
+        activation_fn = partial(
+            ABN,
+            activation=network_config["activation"],
+            activation_param=network_config["activation_param"],
+        )
     elif network_config["bn_mode"] == "inplace":
-        assert network_config["activation"] in ("leaky_relu", "elu", "identity"), \
-            "Inplace batch normalization is only compatible with leaky_relu, elu and identity"
-        activation_fn = partial(InPlaceABN,
-                                activation=network_config["activation"],
-                                activation_param=network_config["activation_param"])
+        assert network_config["activation"] in (
+            "leaky_relu",
+            "elu",
+            "identity",
+        ), "Inplace batch normalization is only compatible with leaky_relu, elu and identity"
+        activation_fn = partial(
+            InPlaceABN,
+            activation=network_config["activation"],
+            activation_param=network_config["activation_param"],
+        )
     elif network_config["bn_mode"] == "sync":
-        assert network_config["activation"] in ("leaky_relu", "elu", "identity"), \
-            "Sync batch normalization is only compatible with leaky_relu, elu and identity"
-        activation_fn = partial(InPlaceABNSync,
-                                activation=network_config["activation"],
-                                activation_param=network_config["activation_param"])
+        assert network_config["activation"] in (
+            "leaky_relu",
+            "elu",
+            "identity",
+        ), "Sync batch normalization is only compatible with leaky_relu, elu and identity"
+        activation_fn = partial(
+            InPlaceABNSync,
+            activation=network_config["activation"],
+            activation_param=network_config["activation_param"],
+        )
     else:
         print("Unrecognized batch normalization mode", network_config["bn_mode"])
         exit(1)
@@ -94,29 +112,43 @@ def create_optimizer(optimizer_config, model):
         params = model.parameters()
 
     if optimizer_config["type"] == "SGD":
-        optimizer = optim.SGD(params,
-                              lr=optimizer_config["learning_rate"],
-                              momentum=optimizer_config["momentum"],
-                              weight_decay=optimizer_config["weight_decay"],
-                              nesterov=optimizer_config["nesterov"])
+        optimizer = optim.SGD(
+            params,
+            lr=optimizer_config["learning_rate"],
+            momentum=optimizer_config["momentum"],
+            weight_decay=optimizer_config["weight_decay"],
+            nesterov=optimizer_config["nesterov"],
+        )
     elif optimizer_config["type"] == "Adam":
-        optimizer = optim.Adam(params,
-                               lr=optimizer_config["learning_rate"],
-                               weight_decay=optimizer_config["weight_decay"])
+        optimizer = optim.Adam(
+            params,
+            lr=optimizer_config["learning_rate"],
+            weight_decay=optimizer_config["weight_decay"],
+        )
     else:
         raise KeyError("unrecognized optimizer {}".format(optimizer_config["type"]))
 
     if optimizer_config["schedule"]["type"] == "step":
-        scheduler = lr_scheduler.StepLR(optimizer, **optimizer_config["schedule"]["params"])
+        scheduler = lr_scheduler.StepLR(
+            optimizer, **optimizer_config["schedule"]["params"]
+        )
     elif optimizer_config["schedule"]["type"] == "multistep":
-        scheduler = lr_scheduler.MultiStepLR(optimizer, **optimizer_config["schedule"]["params"])
+        scheduler = lr_scheduler.MultiStepLR(
+            optimizer, **optimizer_config["schedule"]["params"]
+        )
     elif optimizer_config["schedule"]["type"] == "exponential":
-        scheduler = lr_scheduler.ExponentialLR(optimizer, **optimizer_config["schedule"]["params"])
+        scheduler = lr_scheduler.ExponentialLR(
+            optimizer, **optimizer_config["schedule"]["params"]
+        )
     elif optimizer_config["schedule"]["type"] == "constant":
         scheduler = lr_scheduler.LambdaLR(optimizer, lambda epoch: 1.0)
     elif optimizer_config["schedule"]["type"] == "linear":
+
         def linear_lr(it):
-            return it * optimizer_config["schedule"]["params"]["alpha"] + optimizer_config["schedule"]["params"]["beta"]
+            return (
+                it * optimizer_config["schedule"]["params"]["alpha"]
+                + optimizer_config["schedule"]["params"]["beta"]
+            )
 
         scheduler = lr_scheduler.LambdaLR(optimizer, linear_lr)
 
@@ -146,7 +178,7 @@ def create_transforms(input_config):
     train_transforms += [
         transforms.RandomResizedCrop(input_config["crop_train"]),
         transforms.RandomHorizontalFlip(),
-        transforms.ToTensor()
+        transforms.ToTensor(),
     ]
     if input_config["color_jitter_train"]:
         train_transforms.append(ColorJitter())
@@ -175,15 +207,17 @@ def create_test_transforms(config, crop, scale, ten_crops):
     if ten_crops:
         val_transforms += [
             transforms.TenCrop(crop),
-            transforms.Lambda(lambda crops: [transforms.ToTensor()(crop) for crop in crops]),
+            transforms.Lambda(
+                lambda crops: [transforms.ToTensor()(crop) for crop in crops]
+            ),
             transforms.Lambda(lambda crops: [normalize(crop) for crop in crops]),
-            transforms.Lambda(lambda crops: torch.stack(crops))
+            transforms.Lambda(lambda crops: torch.stack(crops)),
         ]
     else:
         val_transforms += [
             transforms.CenterCrop(crop),
             transforms.ToTensor(),
-            normalize
+            normalize,
         ]
 
     return val_transforms
@@ -223,7 +257,16 @@ def accuracy_sum(output, target, topk=(1,)):
     return res
 
 
-def validate(val_loader, model, criterion, ten_crops=False, print_freq=1, it=None, tb=None, logger=print):
+def validate(
+    val_loader,
+    model,
+    criterion,
+    ten_crops=False,
+    print_freq=1,
+    it=None,
+    tb=None,
+    logger=print,
+):
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
@@ -267,33 +310,54 @@ def validate(val_loader, model, criterion, ten_crops=False, print_freq=1, it=Non
                 meter.update(val.item(), count.item())
 
     # deal with remainder
-    all_reduce = partial(dist.all_reduce, op=dist.ReduceOp.SUM) if dist.is_initialized() else None
+    all_reduce = (
+        partial(dist.all_reduce, op=dist.ReduceOp.SUM)
+        if dist.is_initialized()
+        else None
+    )
     last_group_size = len(val_loader.dataset) % world_size
     for i, (input, target) in enumerate(val_loader):
         if input.shape[0] > 1 or last_group_size == 0:
             process(input, target, all_reduce)
         else:
-            process(input, target,
-                    partial(dist.all_reduce, op=dist.ReduceOp.SUM, group=dist.new_group(range(last_group_size))))
+            process(
+                input,
+                target,
+                partial(
+                    dist.all_reduce,
+                    op=dist.ReduceOp.SUM,
+                    group=dist.new_group(range(last_group_size)),
+                ),
+            )
 
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
 
         if do_print and i % print_freq == 0:
-            logger('Test: [{0}/{1}]\t'
-                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f}) \t'
-                   'Loss {loss.val:.4f} ({loss.avg:.4f}) \t'
-                   'Prec@1 {top1.val:.3f} ({top1.avg:.3f}) \t'
-                   'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
-                i, len(val_loader), batch_time=batch_time, loss=losses,
-                top1=top1, top5=top5))
+            logger(
+                "Test: [{0}/{1}]\t"
+                "Time {batch_time.val:.3f} ({batch_time.avg:.3f}) \t"
+                "Loss {loss.val:.4f} ({loss.avg:.4f}) \t"
+                "Prec@1 {top1.val:.3f} ({top1.avg:.3f}) \t"
+                "Prec@5 {top5.val:.3f} ({top5.avg:.3f})".format(
+                    i,
+                    len(val_loader),
+                    batch_time=batch_time,
+                    loss=losses,
+                    top1=top1,
+                    top5=top5,
+                )
+            )
     if input.shape[0] == 1 and rank > last_group_size > 0:
         dist.new_group(range(last_group_size))
 
     if do_print:
-        logger(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'
-               .format(top1=top1, top5=top5))
+        logger(
+            " * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}".format(
+                top1=top1, top5=top5
+            )
+        )
 
     if it is not None and (not dist.is_initialized() or dist.get_rank() == 0):
         tb.add_scalar("val/loss", losses.avg, it)

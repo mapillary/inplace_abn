@@ -1,3 +1,5 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+
 import torch
 import torch.distributed as dist
 
@@ -29,14 +31,15 @@ class TestDistributedSampler(torch.utils.data.Sampler):
         self.num_replicas = num_replicas
         self.rank = rank
         self.num_samples = (len(self.dataset) // self.num_replicas) + int(
-            (len(self.dataset) % self.num_replicas) < self.rank)
+            (len(self.dataset) % self.num_replicas) < self.rank
+        )
 
     def __iter__(self):
         # deterministically shuffle based on epoch
         indices = torch.arange(0, len(self.dataset))
 
         # subsample
-        indices = indices[self.rank::self.num_replicas]
+        indices = indices[self.rank :: self.num_replicas]
 
         return iter(indices)
 

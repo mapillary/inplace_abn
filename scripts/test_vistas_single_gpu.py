@@ -1,44 +1,65 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+
 import argparse
 from functools import partial
 from os import path
 
+import models
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.nn.functional as functional
-from PIL import Image, ImagePalette
-from torch.utils.data import DataLoader
-from torch.utils.data.distributed import DistributedSampler
-
-import models
 from dataset.dataset import SegmentationDataset, segmentation_collate
 from dataset.transform import SegmentationTransform
 from inplace_abn import InPlaceABN
 from modules import DeeplabV3
+from PIL import Image, ImagePalette
+from torch.utils.data import DataLoader
+from torch.utils.data.distributed import DistributedSampler
 
-parser = argparse.ArgumentParser(description="Testing script for the Vistas segmentation model")
-parser.add_argument("--scales", metavar="LIST", type=str, default="[0.7, 1, 1.2]", help="List of scales")
+parser = argparse.ArgumentParser(
+    description="Testing script for the Vistas segmentation model"
+)
+parser.add_argument(
+    "--scales", metavar="LIST", type=str, default="[0.7, 1, 1.2]", help="List of scales"
+)
 parser.add_argument("--flip", action="store_true", help="Use horizontal flipping")
-parser.add_argument("--fusion-mode", metavar="NAME", type=str, choices=["mean", "voting", "max"], default="mean",
-                    help="How to fuse the outputs. Options: 'mean', 'voting', 'max'")
-parser.add_argument("--output-mode", metavar="NAME", type=str, choices=["palette", "raw", "prob"],
-                    default="final",
-                    help="How the output files are formatted."
-                         " -- palette: color coded predictions"
-                         " -- raw: gray-scale predictions"
-                         " -- prob: gray-scale predictions plus probabilities")
-parser.add_argument("snapshot", metavar="SNAPSHOT_FILE", type=str, help="Snapshot file to load")
+parser.add_argument(
+    "--fusion-mode",
+    metavar="NAME",
+    type=str,
+    choices=["mean", "voting", "max"],
+    default="mean",
+    help="How to fuse the outputs. Options: 'mean', 'voting', 'max'",
+)
+parser.add_argument(
+    "--output-mode",
+    metavar="NAME",
+    type=str,
+    choices=["palette", "raw", "prob"],
+    default="final",
+    help="How the output files are formatted."
+    " -- palette: color coded predictions"
+    " -- raw: gray-scale predictions"
+    " -- prob: gray-scale predictions plus probabilities",
+)
+parser.add_argument(
+    "snapshot", metavar="SNAPSHOT_FILE", type=str, help="Snapshot file to load"
+)
 parser.add_argument("data", metavar="IN_DIR", type=str, help="Path to dataset")
 parser.add_argument("output", metavar="OUT_DIR", type=str, help="Path to output folder")
-parser.add_argument("--world-size", metavar="WS", type=int, default=1, help="Number of GPUs")
+parser.add_argument(
+    "--world-size", metavar="WS", type=int, default=1, help="Number of GPUs"
+)
 parser.add_argument("--rank", metavar="RANK", type=int, default=0, help="GPU id")
 
 
 def flip(x, dim):
     indices = [slice(None)] * x.dim()
-    indices[dim] = torch.arange(x.size(dim) - 1, -1, -1,
-                                dtype=torch.long, device=x.device)
+    indices[dim] = torch.arange(
+        x.size(dim) - 1, -1, -1, dtype=torch.long, device=x.device
+    )
     return x[tuple(indices)]
 
 
@@ -79,7 +100,9 @@ class SegmentationModule(nn.Module):
 
     class _MaxFusion:
         def __init__(self, x, _):
-            self.buffer_cls = x.new_zeros(x.size(0), x.size(2), x.size(3), dtype=torch.long)
+            self.buffer_cls = x.new_zeros(
+                x.size(0), x.size(2), x.size(3), dtype=torch.long
+            )
             self.buffer_prob = x.new_zeros(x.size(0), x.size(2), x.size(3))
 
         def update(self, sem_logits):
@@ -135,7 +158,9 @@ class SegmentationModule(nn.Module):
             if do_flip:
                 # Main orientation
                 sem_logits = self._network(flip(x, -1), scale)
-                sem_logits = functional.upsample(sem_logits, size=out_size, mode="bilinear")
+                sem_logits = functional.upsample(
+                    sem_logits, size=out_size, mode="bilinear"
+                )
                 fusion.update(flip(sem_logits, -1))
 
         return fusion.output()
@@ -170,7 +195,7 @@ def main():
         sampler=DistributedSampler(dataset, args.world_size, args.rank),
         num_workers=2,
         collate_fn=segmentation_collate,
-        shuffle=False
+        shuffle=False,
     )
 
     # Run testing
@@ -182,7 +207,9 @@ def main():
             img = rec["img"].cuda(non_blocking=True)
             probs, preds = model(img, scales, args.flip)
 
-            for i, (prob, pred) in enumerate(zip(torch.unbind(probs, dim=0), torch.unbind(preds, dim=0))):
+            for i, (prob, pred) in enumerate(
+                zip(torch.unbind(probs, dim=0), torch.unbind(preds, dim=0))
+            ):
                 out_size = rec["meta"][i]["size"]
                 img_name = rec["meta"][i]["idx"]
 
@@ -203,8 +230,10 @@ def load_snapshot(snapshot_file):
     print("--- Loading model from snapshot")
 
     # Create network
-    norm_act = partial(InPlaceABN, activation="leaky_relu", activation_param=.01)
-    body = models.__dict__["net_wider_resnet38_a2"](norm_act=norm_act, dilation=(1, 2, 4, 4))
+    norm_act = partial(InPlaceABN, activation="leaky_relu", activation_param=0.01)
+    body = models.__dict__["net_wider_resnet38_a2"](
+        norm_act=norm_act, dilation=(1, 2, 4, 4)
+    )
     head = DeeplabV3(4096, 256, 256, norm_act=norm_act, pooling_size=(84, 84))
 
     # Load snapshot and recover network state
@@ -215,74 +244,83 @@ def load_snapshot(snapshot_file):
     return body, head, data["state_dict"]["cls"]
 
 
-_PALETTE = np.array([[165, 42, 42],
-                     [0, 192, 0],
-                     [196, 196, 196],
-                     [190, 153, 153],
-                     [180, 165, 180],
-                     [90, 120, 150],
-                     [102, 102, 156],
-                     [128, 64, 255],
-                     [140, 140, 200],
-                     [170, 170, 170],
-                     [250, 170, 160],
-                     [96, 96, 96],
-                     [230, 150, 140],
-                     [128, 64, 128],
-                     [110, 110, 110],
-                     [244, 35, 232],
-                     [150, 100, 100],
-                     [70, 70, 70],
-                     [150, 120, 90],
-                     [220, 20, 60],
-                     [255, 0, 0],
-                     [255, 0, 100],
-                     [255, 0, 200],
-                     [200, 128, 128],
-                     [255, 255, 255],
-                     [64, 170, 64],
-                     [230, 160, 50],
-                     [70, 130, 180],
-                     [190, 255, 255],
-                     [152, 251, 152],
-                     [107, 142, 35],
-                     [0, 170, 30],
-                     [255, 255, 128],
-                     [250, 0, 30],
-                     [100, 140, 180],
-                     [220, 220, 220],
-                     [220, 128, 128],
-                     [222, 40, 40],
-                     [100, 170, 30],
-                     [40, 40, 40],
-                     [33, 33, 33],
-                     [100, 128, 160],
-                     [142, 0, 0],
-                     [70, 100, 150],
-                     [210, 170, 100],
-                     [153, 153, 153],
-                     [128, 128, 128],
-                     [0, 0, 80],
-                     [250, 170, 30],
-                     [192, 192, 192],
-                     [220, 220, 0],
-                     [140, 140, 20],
-                     [119, 11, 32],
-                     [150, 0, 255],
-                     [0, 60, 100],
-                     [0, 0, 142],
-                     [0, 0, 90],
-                     [0, 0, 230],
-                     [0, 80, 100],
-                     [128, 64, 64],
-                     [0, 0, 110],
-                     [0, 0, 70],
-                     [0, 0, 192],
-                     [32, 32, 32],
-                     [120, 10, 10]], dtype=np.uint8)
-_PALETTE = np.concatenate([_PALETTE, np.zeros((256 - _PALETTE.shape[0], 3), dtype=np.uint8)], axis=0)
+_PALETTE = np.array(
+    [
+        [165, 42, 42],
+        [0, 192, 0],
+        [196, 196, 196],
+        [190, 153, 153],
+        [180, 165, 180],
+        [90, 120, 150],
+        [102, 102, 156],
+        [128, 64, 255],
+        [140, 140, 200],
+        [170, 170, 170],
+        [250, 170, 160],
+        [96, 96, 96],
+        [230, 150, 140],
+        [128, 64, 128],
+        [110, 110, 110],
+        [244, 35, 232],
+        [150, 100, 100],
+        [70, 70, 70],
+        [150, 120, 90],
+        [220, 20, 60],
+        [255, 0, 0],
+        [255, 0, 100],
+        [255, 0, 200],
+        [200, 128, 128],
+        [255, 255, 255],
+        [64, 170, 64],
+        [230, 160, 50],
+        [70, 130, 180],
+        [190, 255, 255],
+        [152, 251, 152],
+        [107, 142, 35],
+        [0, 170, 30],
+        [255, 255, 128],
+        [250, 0, 30],
+        [100, 140, 180],
+        [220, 220, 220],
+        [220, 128, 128],
+        [222, 40, 40],
+        [100, 170, 30],
+        [40, 40, 40],
+        [33, 33, 33],
+        [100, 128, 160],
+        [142, 0, 0],
+        [70, 100, 150],
+        [210, 170, 100],
+        [153, 153, 153],
+        [128, 128, 128],
+        [0, 0, 80],
+        [250, 170, 30],
+        [192, 192, 192],
+        [220, 220, 0],
+        [140, 140, 20],
+        [119, 11, 32],
+        [150, 0, 255],
+        [0, 60, 100],
+        [0, 0, 142],
+        [0, 0, 90],
+        [0, 0, 230],
+        [0, 80, 100],
+        [128, 64, 64],
+        [0, 0, 110],
+        [0, 0, 70],
+        [0, 0, 192],
+        [32, 32, 32],
+        [120, 10, 10],
+    ],
+    dtype=np.uint8,
+)
+_PALETTE = np.concatenate(
+    [_PALETTE, np.zeros((256 - _PALETTE.shape[0], 3), dtype=np.uint8)], axis=0
+)
 _PALETTE = ImagePalette.ImagePalette(
-    palette=list(_PALETTE[:, 0]) + list(_PALETTE[:, 1]) + list(_PALETTE[:, 2]), mode="RGB")
+    palette=list(_PALETTE[:, 0]) + list(_PALETTE[:, 1]) + list(_PALETTE[:, 2]),
+    mode="RGB",
+)
 
 
 def get_pred_image(tensor, out_size, with_palette):

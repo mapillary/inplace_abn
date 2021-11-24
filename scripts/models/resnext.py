@@ -1,23 +1,27 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+
 import sys
 from collections import OrderedDict
 from functools import partial
 
 import torch.nn as nn
-
 from inplace_abn import ABN
 from modules import IdentityResidualBlock, GlobalAvgPool2d
+
 from .util import try_index
 
 
 class ResNeXt(nn.Module):
-    def __init__(self,
-                 structure,
-                 groups=64,
-                 norm_act=ABN,
-                 input_3x3=False,
-                 classes=0,
-                 dilation=1,
-                 base_channels=(128, 128, 256)):
+    def __init__(
+        self,
+        structure,
+        groups=64,
+        norm_act=ABN,
+        input_3x3=False,
+        classes=0,
+        dilation=1,
+        base_channels=(128, 128, 256),
+    ):
         """Pre-activation (identity mapping) ResNeXt model
 
         Parameters
@@ -55,12 +59,12 @@ class ResNeXt(nn.Module):
                 ("conv2", nn.Conv2d(64, 64, 3, stride=1, padding=1, bias=False)),
                 ("bn2", norm_act(64)),
                 ("conv3", nn.Conv2d(64, 64, 3, stride=1, padding=1, bias=False)),
-                ("pool", nn.MaxPool2d(3, stride=2, padding=1))
+                ("pool", nn.MaxPool2d(3, stride=2, padding=1)),
             ]
         else:
             layers = [
                 ("conv1", nn.Conv2d(3, 64, 7, stride=2, padding=3, bias=False)),
-                ("pool", nn.MaxPool2d(3, stride=2, padding=1))
+                ("pool", nn.MaxPool2d(3, stride=2, padding=1)),
             ]
         self.mod1 = nn.Sequential(OrderedDict(layers))
 
@@ -72,10 +76,19 @@ class ResNeXt(nn.Module):
             blocks = []
             for block_id in range(num):
                 s, d = self._stride_dilation(mod_id, block_id, dilation)
-                blocks.append((
-                    "block%d" % (block_id + 1),
-                    IdentityResidualBlock(in_channels, channels, stride=s, norm_act=norm_act, groups=groups, dilation=d)
-                ))
+                blocks.append(
+                    (
+                        "block%d" % (block_id + 1),
+                        IdentityResidualBlock(
+                            in_channels,
+                            channels,
+                            stride=s,
+                            norm_act=norm_act,
+                            groups=groups,
+                            dilation=d,
+                        ),
+                    )
+                )
 
                 # Update channels
                 in_channels = channels[-1]
@@ -87,10 +100,14 @@ class ResNeXt(nn.Module):
         # Pooling and predictor
         self.bn_out = norm_act(in_channels)
         if classes != 0:
-            self.classifier = nn.Sequential(OrderedDict([
-                ("avg_pool", GlobalAvgPool2d()),
-                ("fc", nn.Linear(in_channels, classes))
-            ]))
+            self.classifier = nn.Sequential(
+                OrderedDict(
+                    [
+                        ("avg_pool", GlobalAvgPool2d()),
+                        ("fc", nn.Linear(in_channels, classes)),
+                    ]
+                )
+            )
 
     def forward(self, img):
         out = self.mod1(img)

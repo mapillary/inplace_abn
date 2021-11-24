@@ -1,18 +1,16 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+
 import sys
 from collections import OrderedDict
 from functools import partial
 
 import torch.nn as nn
-
 from inplace_abn import ABN
 from modules import IdentityResidualBlock, GlobalAvgPool2d
 
 
 class WiderResNet(nn.Module):
-    def __init__(self,
-                 structure,
-                 norm_act=ABN,
-                 classes=0):
+    def __init__(self, structure, norm_act=ABN, classes=0):
         """Wider ResNet with pre-activation (identity mapping) blocks
 
         Parameters
@@ -32,37 +30,56 @@ class WiderResNet(nn.Module):
             raise ValueError("Expected a structure with six values")
 
         # Initial layers
-        self.mod1 = nn.Sequential(OrderedDict([
-            ("conv1", nn.Conv2d(3, 64, 3, stride=1, padding=1, bias=False))
-        ]))
+        self.mod1 = nn.Sequential(
+            OrderedDict(
+                [("conv1", nn.Conv2d(3, 64, 3, stride=1, padding=1, bias=False))]
+            )
+        )
 
         # Groups of residual blocks
         in_channels = 64
-        channels = [(128, 128), (256, 256), (512, 512), (512, 1024), (512, 1024, 2048), (1024, 2048, 4096)]
+        channels = [
+            (128, 128),
+            (256, 256),
+            (512, 512),
+            (512, 1024),
+            (512, 1024, 2048),
+            (1024, 2048, 4096),
+        ]
         for mod_id, num in enumerate(structure):
             # Create blocks for module
             blocks = []
             for block_id in range(num):
-                blocks.append((
-                    "block%d" % (block_id + 1),
-                    IdentityResidualBlock(in_channels, channels[mod_id], norm_act=norm_act)
-                ))
+                blocks.append(
+                    (
+                        "block%d" % (block_id + 1),
+                        IdentityResidualBlock(
+                            in_channels, channels[mod_id], norm_act=norm_act
+                        ),
+                    )
+                )
 
                 # Update channels and p_keep
                 in_channels = channels[mod_id][-1]
 
             # Create module
             if mod_id <= 4:
-                self.add_module("pool%d" % (mod_id + 2), nn.MaxPool2d(3, stride=2, padding=1))
+                self.add_module(
+                    "pool%d" % (mod_id + 2), nn.MaxPool2d(3, stride=2, padding=1)
+                )
             self.add_module("mod%d" % (mod_id + 2), nn.Sequential(OrderedDict(blocks)))
 
         # Pooling and predictor
         self.bn_out = norm_act(in_channels)
         if classes != 0:
-            self.classifier = nn.Sequential(OrderedDict([
-                ("avg_pool", GlobalAvgPool2d()),
-                ("fc", nn.Linear(in_channels, classes))
-            ]))
+            self.classifier = nn.Sequential(
+                OrderedDict(
+                    [
+                        ("avg_pool", GlobalAvgPool2d()),
+                        ("fc", nn.Linear(in_channels, classes)),
+                    ]
+                )
+            )
 
     def forward(self, img):
         out = self.mod1(img)
@@ -81,11 +98,7 @@ class WiderResNet(nn.Module):
 
 
 class WiderResNetA2(nn.Module):
-    def __init__(self,
-                 structure,
-                 norm_act=ABN,
-                 classes=0,
-                 dilation=False):
+    def __init__(self, structure, norm_act=ABN, classes=0, dilation=False):
         """Wider ResNet with pre-activation (identity mapping) blocks
 
         This variant uses down-sampling by max-pooling in the first two blocks and by strided convolution in the others.
@@ -110,13 +123,22 @@ class WiderResNetA2(nn.Module):
             raise ValueError("Expected a structure with six values")
 
         # Initial layers
-        self.mod1 = nn.Sequential(OrderedDict([
-            ("conv1", nn.Conv2d(3, 64, 3, stride=1, padding=1, bias=False))
-        ]))
+        self.mod1 = nn.Sequential(
+            OrderedDict(
+                [("conv1", nn.Conv2d(3, 64, 3, stride=1, padding=1, bias=False))]
+            )
+        )
 
         # Groups of residual blocks
         in_channels = 64
-        channels = [(128, 128), (256, 256), (512, 512), (512, 1024), (512, 1024, 2048), (1024, 2048, 4096)]
+        channels = [
+            (128, 128),
+            (256, 256),
+            (512, 512),
+            (512, 1024),
+            (512, 1024, 2048),
+            (1024, 2048, 4096),
+        ]
         for mod_id, num in enumerate(structure):
             # Create blocks for module
             blocks = []
@@ -140,27 +162,41 @@ class WiderResNetA2(nn.Module):
                 else:
                     drop = None
 
-                blocks.append((
-                    "block%d" % (block_id + 1),
-                    IdentityResidualBlock(in_channels, channels[mod_id], norm_act=norm_act, stride=stride, dilation=dil,
-                                          dropout=drop)
-                ))
+                blocks.append(
+                    (
+                        "block%d" % (block_id + 1),
+                        IdentityResidualBlock(
+                            in_channels,
+                            channels[mod_id],
+                            norm_act=norm_act,
+                            stride=stride,
+                            dilation=dil,
+                            dropout=drop,
+                        ),
+                    )
+                )
 
                 # Update channels and p_keep
                 in_channels = channels[mod_id][-1]
 
             # Create module
             if mod_id < 2:
-                self.add_module("pool%d" % (mod_id + 2), nn.MaxPool2d(3, stride=2, padding=1))
+                self.add_module(
+                    "pool%d" % (mod_id + 2), nn.MaxPool2d(3, stride=2, padding=1)
+                )
             self.add_module("mod%d" % (mod_id + 2), nn.Sequential(OrderedDict(blocks)))
 
         # Pooling and predictor
         self.bn_out = norm_act(in_channels)
         if classes != 0:
-            self.classifier = nn.Sequential(OrderedDict([
-                ("avg_pool", GlobalAvgPool2d()),
-                ("fc", nn.Linear(in_channels, classes))
-            ]))
+            self.classifier = nn.Sequential(
+                OrderedDict(
+                    [
+                        ("avg_pool", GlobalAvgPool2d()),
+                        ("fc", nn.Linear(in_channels, classes)),
+                    ]
+                )
+            )
 
     def forward(self, img):
         out = self.mod1(img)

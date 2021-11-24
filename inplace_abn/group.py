@@ -1,3 +1,5 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+
 import torch
 import torch.distributed as distributed
 import torch.nn as nn
