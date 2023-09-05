@@ -44,7 +44,7 @@ class Lighting:
         return img + rgb.view(3, 1, 1)
 
 
-class Saturation(object):
+class Saturation:
     def __init__(self, var):
         self._var = var
 
@@ -54,7 +54,7 @@ class Saturation(object):
         return _blend(img, gs, alpha)
 
 
-class Brightness(object):
+class Brightness:
     def __init__(self, var):
         self._var = var
 
@@ -64,7 +64,7 @@ class Brightness(object):
         return _blend(img, gs, alpha)
 
 
-class Contrast(object):
+class Contrast:
     def __init__(self, var):
         self._var = var
 
@@ -75,7 +75,7 @@ class Contrast(object):
         return _blend(img, gs, alpha)
 
 
-class ColorJitter(object):
+class ColorJitter:
     def __init__(
         self,
         saturation=_DEFAULT_BCS[0],
