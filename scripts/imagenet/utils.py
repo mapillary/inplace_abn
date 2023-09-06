@@ -223,7 +223,7 @@ def create_test_transforms(config, crop, scale, ten_crops):
     return val_transforms
 
 
-class AverageMeter(object):
+class AverageMeter:
     """Computes and stores the average and current value"""
 
     def __init__(self):
