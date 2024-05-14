@@ -60,8 +60,8 @@ void forward(
     at::Tensor& x,
     const at::Tensor& mean,
     const at::Tensor& var,
-    const c10::optional<at::Tensor>& weight,
-    const c10::optional<at::Tensor>& bias,
+    const std::optional<at::Tensor>& weight,
+    const std::optional<at::Tensor>& bias,
     float eps,
     Activation activation,
     float activation_param) {
@@ -96,8 +96,8 @@ void forward(
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> backward_reduce(
     const at::Tensor& y_act,
     const at::Tensor& dy_act,
-    const c10::optional<at::Tensor>& weight,
-    const c10::optional<at::Tensor>& bias,
+    const std::optional<at::Tensor>& weight,
+    const std::optional<at::Tensor>& bias,
     float eps,
     Activation activation,
     float activation_param) {
@@ -143,7 +143,7 @@ void backward_train(
     const at::Tensor& count,
     const at::Tensor& sum_dy,
     const at::Tensor& sum_xhat_dy,
-    const c10::optional<at::Tensor>& weight,
+    const std::optional<at::Tensor>& weight,
     float eps) {
   // Check dimensions and types
   IABN_CHECK(xhat.ndimension() >= 2, "xhat should have at least 2 dimensions");
@@ -176,7 +176,7 @@ void backward_train(
 at::Tensor backward_test(
     const at::Tensor& dy_,
     const at::Tensor& var,
-    const c10::optional<at::Tensor>& weight,
+    const std::optional<at::Tensor>& weight,
     float eps) {
   // Check dimensions and types
   IABN_CHECK(dy_.ndimension() >= 2, "dy should have at least 2 dimensions");

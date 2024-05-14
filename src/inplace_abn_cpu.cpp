@@ -25,8 +25,8 @@ template <typename scalar_t, Activation activation>
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> backward_reduce_impl(
     const at::Tensor& y_act_,
     const at::Tensor& dy_act_,
-    const c10::optional<at::Tensor>& weight_,
-    const c10::optional<at::Tensor>& bias_,
+    const std::optional<at::Tensor>& weight_,
+    const std::optional<at::Tensor>& bias_,
     float eps,
     float activation_param) {
   // Initialize output tensors
@@ -108,8 +108,8 @@ void forward_cpu(
     at::Tensor& x_,
     const at::Tensor& mean,
     const at::Tensor& var,
-    const c10::optional<at::Tensor>& weight,
-    const c10::optional<at::Tensor>& bias,
+    const std::optional<at::Tensor>& weight,
+    const std::optional<at::Tensor>& bias,
     float eps,
     Activation activation,
     float activation_param) {
@@ -144,8 +144,8 @@ void forward_cpu(
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> backward_reduce_cpu(
     const at::Tensor& y_act,
     const at::Tensor& dy_act,
-    const c10::optional<at::Tensor>& weight,
-    const c10::optional<at::Tensor>& bias,
+    const std::optional<at::Tensor>& weight,
+    const std::optional<at::Tensor>& bias,
     float eps,
     Activation activation,
     float activation_param) {
@@ -176,7 +176,7 @@ void backward_cpu(
     const at::Tensor& count,
     const at::Tensor& sum_dy,
     const at::Tensor& sum_xhat_dy,
-    const c10::optional<at::Tensor>& weight,
+    const std::optional<at::Tensor>& weight,
     float eps) {
   CHECK_NOT_HALF(xhat_);
 

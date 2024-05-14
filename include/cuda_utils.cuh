@@ -72,7 +72,7 @@ template<
     template <typename U> class PtrTraits = at::DefaultPtrTraits,
     typename index_t = int64_t>
 static at::PackedTensorAccessor<scalar_t, dim, PtrTraits, index_t> packed_accessor_or_dummy(
-    const c10::optional<at::Tensor>& t) {
+    const std::optional<at::Tensor>& t) {
   if (!t.has_value()) {
     const std::vector<index_t> zeros(dim);
     return at::PackedTensorAccessor<scalar_t, dim, PtrTraits, index_t>(nullptr, zeros.data(), zeros.data());

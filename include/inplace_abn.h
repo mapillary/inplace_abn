@@ -36,8 +36,8 @@ void forward_cpu(
     at::Tensor& x,
     const at::Tensor& mean,
     const at::Tensor& var,
-    const c10::optional<at::Tensor>& weight,
-    const c10::optional<at::Tensor>& bias,
+    const std::optional<at::Tensor>& weight,
+    const std::optional<at::Tensor>& bias,
     float eps,
     Activation activation,
     float activation_param);
@@ -45,8 +45,8 @@ void forward_cuda(
     at::Tensor& x,
     const at::Tensor& mean,
     const at::Tensor& var,
-    const c10::optional<at::Tensor>& weight,
-    const c10::optional<at::Tensor>& bias,
+    const std::optional<at::Tensor>& weight,
+    const std::optional<at::Tensor>& bias,
     float eps,
     Activation activation,
     float activation_param);
@@ -54,16 +54,16 @@ void forward_cuda(
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> backward_reduce_cpu(
     const at::Tensor& y_act,
     const at::Tensor& dy_act,
-    const c10::optional<at::Tensor>& weight,
-    const c10::optional<at::Tensor>& bias,
+    const std::optional<at::Tensor>& weight,
+    const std::optional<at::Tensor>& bias,
     float eps,
     Activation activation,
     float activation_param);
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> backward_reduce_cuda(
     const at::Tensor& y_act,
     const at::Tensor& dy_act,
-    const c10::optional<at::Tensor>& weight,
-    const c10::optional<at::Tensor>& bias,
+    const std::optional<at::Tensor>& weight,
+    const std::optional<at::Tensor>& bias,
     float eps,
     Activation activation,
     float activation_param);
@@ -75,7 +75,7 @@ void backward_cpu(
     const at::Tensor& count,
     const at::Tensor& sum_dy,
     const at::Tensor& sum_xhat_dy,
-    const c10::optional<at::Tensor>& weight,
+    const std::optional<at::Tensor>& weight,
     float eps);
 void backward_cuda(
     const at::Tensor& xhat,
@@ -84,7 +84,7 @@ void backward_cuda(
     const at::Tensor& count,
     const at::Tensor& sum_dy,
     const at::Tensor& sum_xhat_dy,
-    const c10::optional<at::Tensor>& weight,
+    const std::optional<at::Tensor>& weight,
     float eps);
 
 /***********************************************************************************************************************
