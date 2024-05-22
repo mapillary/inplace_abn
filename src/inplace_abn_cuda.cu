@@ -85,7 +85,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> reduce_statistics_template(
 
 template<typename scalar_t, typename prmscalar_t, typename index_t>
 void forward_template(at::Tensor& x_, const at::Tensor& mean, const at::Tensor& var,
-                      const std::optional<at::Tensor>& weight, const c10::optional<at::Tensor>& bias,
+                      const std::optional<at::Tensor>& weight, const std::optional<at::Tensor>& bias,
                       float eps, Activation activation, float activation_param) {
   // Normalize shape and get dimensions
   auto x = normalize_shape(x_);
@@ -248,7 +248,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> reduce_statistics_cuda(
 }
 
 void forward_cuda(at::Tensor& x, const at::Tensor& mean, const at::Tensor& var,
-                  const std::optional<at::Tensor>& weight, const c10::optional<at::Tensor>& bias,
+                  const std::optional<at::Tensor>& weight, const std::optional<at::Tensor>& bias,
                   float eps, Activation activation, float activation_param) {
   const auto& w_scalar_type = weight.has_value() ? weight.value().scalar_type() : x.scalar_type();
 
