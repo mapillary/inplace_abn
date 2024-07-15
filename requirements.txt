@@ -1,6 +1,6 @@
 pillow
 numpy == 1.22.0
-setuptools == 65.5.1
+setuptools == 70.0.0
 tensorboardX == 2.0
 torch == 1.4.0
 torchvision == 0.5.0
