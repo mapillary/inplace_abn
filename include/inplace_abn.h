@@ -132,8 +132,8 @@ struct ActivationFn<scalar_t, Activation::ELU> {
       y = y_act;
       dy = dy_act;
     } else {
-      y = ::log1p(static_cast<scalar_t>(y_act / activation_param));
       dy = static_cast<scalar_t>(dy_act * (y_act + activation_param));
+      y = ::log1p(static_cast<scalar_t>(y_act / activation_param));
     }
   }
 };
