@@ -113,8 +113,8 @@ template<typename scalar_t, typename Op, typename PTA>
 __device__ scalar_t reduce(Op op, PTA tensor, int plane) {
   // first the reductions each thread does separately
   scalar_t sum = static_cast<scalar_t>(0);
-  for (int batch = threadIdx.y; batch < tensor.size(0); batch += blockDim.y) {
-    for (int x = threadIdx.x; x < tensor.size(2); x += blockDim.x) {
+  for (auto batch = threadIdx.y; batch < tensor.size(0); batch += blockDim.y) {
+    for (auto x = threadIdx.x; x < tensor.size(2); x += blockDim.x) {
       sum += op(batch, plane, x);
     }
   }
@@ -128,7 +128,7 @@ __device__ scalar_t reduce(Op op, PTA tensor, int plane) {
   // there are at most WARP_SIZE**2 threads at the beginning
   __shared__ scalar_t shared[WARP_SIZE];
   __syncthreads();
-  int tid = threadIdx.x + threadIdx.y * blockDim.x;
+  auto tid = threadIdx.x + threadIdx.y * blockDim.x;
   if (tid % WARP_SIZE == 0) {
     shared[tid / WARP_SIZE] = sum;
   }

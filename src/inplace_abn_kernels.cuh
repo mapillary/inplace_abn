@@ -22,9 +22,9 @@ __global__ void statistics_kernel(
 
   __shared__ int shared_n[2 * 2 * WARP_SIZE + WARP_SIZE];
 
-  int plane = blockIdx.x;
+  auto plane = blockIdx.x;
   int N = input.size(0) * input.size(2);
-  int tid = threadIdx.x + threadIdx.y * blockDim.x;
+  auto tid = threadIdx.x + threadIdx.y * blockDim.x;
 
   // Compute the mean and variance across (batch, x/y/z)
   // this uses the Welford (in the for loop)/parallel algorithm (to sum across the block)
@@ -38,8 +38,8 @@ __global__ void statistics_kernel(
   accscalar_t avg = 0;
   accscalar_t var_n = 0;
   int n = 0;
-  for (int batch = threadIdx.y; batch < input.size(0); batch += blockDim.y) {
-    for (int x = threadIdx.x; x < input.size(2); x += blockDim.x) {
+  for (auto batch = threadIdx.y; batch < input.size(0); batch += blockDim.y) {
+    for (auto x = threadIdx.x; x < input.size(2); x += blockDim.x) {
       accscalar_t v = input[batch][plane][x];
       accscalar_t d1 = v - avg;
       n++;
@@ -102,9 +102,9 @@ __global__ void reduce_statistics_kernel(
     at::PackedTensorAccessor<scalar_t, 1, at::RestrictPtrTraits, index_t> mean,
     at::PackedTensorAccessor<scalar_t, 1, at::RestrictPtrTraits, index_t> var) {
   int num = all_mean.size(0), chn = all_mean.size(1);
-  int tid = threadIdx.x, bid = blockIdx.x;
+  auto tid = threadIdx.x, bid = blockIdx.x;
 
-  for (int c = bid * blockDim.x + tid; c < chn; c += gridDim.x * blockDim.x) {
+  for (auto c = bid * blockDim.x + tid; c < chn; c += gridDim.x * blockDim.x) {
     scalar_t mean_c = 0;
     scalar_t var_c = 0;
     int64_t count_c = 0;
