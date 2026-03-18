@@ -224,7 +224,7 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
       "iABN forward pass. This is an in-place operation w.r.t. x");
 
   // Backward methods
-  m.def("backward_reduce", &backward_reduce, "First step of the backward pass");
+  m.def("backward_reduce", &backward_reduce, "First step of the backward pass. This is an in-place operation w.r.t. y_act, dy_act,");
   m.def(
       "backward_train",
       &backward_train,

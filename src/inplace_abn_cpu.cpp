@@ -30,8 +30,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> backward_reduce_impl(
     float eps,
     float activation_param) {
   // Initialize output tensors
-  auto xhat_ = at::empty_like(y_act_);
-  auto dy_ = at::empty_like(y_act_);
+  auto &xhat_ = y_act_; // reuse
+  auto &dy_ = dy_act_;  // reuse
   auto sum_dy_ = at::zeros({y_act_.size(1)}, y_act_.options());
   auto sum_xhat_dy_ = at::zeros({y_act_.size(1)}, y_act_.options());
 
@@ -119,13 +119,14 @@ void forward_cpu(
 
   // Apply normalization
   auto abs_weight = weight.has_value()
-      ? weight.value().abs() + eps
+      ? weight.value().abs().add_(eps)
       : at::ones({mean.size(0)}, mean.options());
-  auto inv_std = 1 / at::sqrt(var + eps);
+  auto inv_std = var.add(eps).sqrt_().reciprocal_();
 
   auto scale = weight.has_value() ? abs_weight * inv_std : inv_std;
-  auto shift = weight.has_value() ? bias.value() - mean * abs_weight * inv_std
-                                  : -mean * inv_std;
+  auto shift = weight.has_value() ? (- mean).mul_(abs_weight).mul_(inv_std).add_(bias.value())
+                                  : (- mean).mul_(inv_std);
+  inv_std = at::Tensor(); // free memory
 
   x.mul_(normalize_shape(scale)).add_(normalize_shape(shift));
 
@@ -187,8 +188,8 @@ void backward_cpu(
       normalize_shape(sum_xhat_dy / count.to(sum_xhat_dy.options()));
 
   auto mult = weight.has_value()
-      ? (weight.value().abs() + eps) / (var + eps).sqrt()
-      : 1 / (var + eps).sqrt();
+      ? (weight.value().abs().add_(eps)).div_(var.add(eps).sqrt_())
+      : var.add(eps).sqrt_().reciprocal_();
 
   // dy = (dy - mean_dy - xhat * mean_xhat_dy) * mult
   dy.sub_(mean_dy).sub_(xhat * mean_xhat_dy).mul_(normalize_shape(mult));

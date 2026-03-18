@@ -143,8 +143,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> backward_reduce_templ
   }
 
   // Initialize output tensors
-  auto xhat = at::empty_like(y_act);
-  auto dy = at::empty_like(y_act);
+  auto &xhat = y_act; // reuse
+  auto &dy = dy_act; // reuse
   auto sum_dy = at::empty({chn}, acc_options);
   auto sum_xhat_dy = at::empty({chn}, acc_options);
 

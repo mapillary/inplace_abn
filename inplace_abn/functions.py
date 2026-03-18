@@ -115,9 +115,11 @@ class InPlaceABN(autograd.Function):
     @once_differentiable
     def backward(ctx, dy_act):
         y_act, var, count, weight, bias = ctx.saved_tensors
-
         # Call backward_reduce if we need to compute at least one of the gradients
         if any(ctx.needs_input_grad):
+            # remove memory overlaping to allow for in-place operation
+            dy_act = dy_act.contiguous()
+            # This overwrites y_act with xhat and dy_act with dy
             xhat, dy, sum_dy_local, sum_xhat_dy_local = _backend.backward_reduce(
                 y_act,
                 dy_act,
