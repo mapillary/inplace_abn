@@ -1,11 +1,13 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+
 import sys
 from collections import OrderedDict
 from functools import partial
 
 import torch.nn as nn
-
 from inplace_abn import ABN
 from modules import GlobalAvgPool2d, ResidualBlock
+
 from .util import try_index
 
 
@@ -29,13 +31,15 @@ class ResNet(nn.Module):
         If `True` output a list with the outputs of all modules
     """
 
-    def __init__(self,
-                 structure,
-                 bottleneck,
-                 norm_act=ABN,
-                 classes=0,
-                 dilation=1,
-                 keep_outputs=False):
+    def __init__(
+        self,
+        structure,
+        bottleneck,
+        norm_act=ABN,
+        classes=0,
+        dilation=1,
+        keep_outputs=False,
+    ):
         super(ResNet, self).__init__()
         self.structure = structure
         self.bottleneck = bottleneck
@@ -50,7 +54,7 @@ class ResNet(nn.Module):
         # Initial layers
         layers = [
             ("conv1", nn.Conv2d(3, 64, 7, stride=2, padding=3, bias=False)),
-            ("bn1", norm_act(64))
+            ("bn1", norm_act(64)),
         ]
         if try_index(dilation, 0) == 1:
             layers.append(("pool1", nn.MaxPool2d(3, stride=2, padding=1)))
@@ -67,10 +71,18 @@ class ResNet(nn.Module):
             blocks = []
             for block_id in range(num):
                 stride, dil = self._stride_dilation(dilation, mod_id, block_id)
-                blocks.append((
-                    "block%d" % (block_id + 1),
-                    ResidualBlock(in_channels, channels, norm_act=norm_act, stride=stride, dilation=dil)
-                ))
+                blocks.append(
+                    (
+                        "block%d" % (block_id + 1),
+                        ResidualBlock(
+                            in_channels,
+                            channels,
+                            norm_act=norm_act,
+                            stride=stride,
+                            dilation=dil,
+                        ),
+                    )
+                )
 
                 # Update channels and p_keep
                 in_channels = channels[-1]
@@ -83,10 +95,14 @@ class ResNet(nn.Module):
 
         # Pooling and predictor
         if classes != 0:
-            self.classifier = nn.Sequential(OrderedDict([
-                ("avg_pool", GlobalAvgPool2d()),
-                ("fc", nn.Linear(in_channels, classes))
-            ]))
+            self.classifier = nn.Sequential(
+                OrderedDict(
+                    [
+                        ("avg_pool", GlobalAvgPool2d()),
+                        ("fc", nn.Linear(in_channels, classes)),
+                    ]
+                )
+            )
 
     @staticmethod
     def _stride_dilation(dilation, mod_id, block_id):

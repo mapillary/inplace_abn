@@ -1,3 +1,6 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+
+
 def try_index(scalar_or_list, i):
     try:
         return scalar_or_list[i]

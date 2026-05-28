@@ -1,8 +1,9 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+
 from collections import OrderedDict
 
 import torch.nn as nn
 import torch.nn.functional as functional
-
 from inplace_abn import ABN
 
 
@@ -30,14 +31,16 @@ class ResidualBlock(nn.Module):
         Function to create Dropout Module.
     """
 
-    def __init__(self,
-                 in_channels,
-                 channels,
-                 stride=1,
-                 dilation=1,
-                 groups=1,
-                 norm_act=ABN,
-                 dropout=None):
+    def __init__(
+        self,
+        in_channels,
+        channels,
+        stride=1,
+        dilation=1,
+        groups=1,
+        norm_act=ABN,
+        dropout=None,
+    ):
         super(ResidualBlock, self).__init__()
 
         # Check parameters for inconsistencies
@@ -53,12 +56,32 @@ class ResidualBlock(nn.Module):
             bn2 = norm_act(channels[1])
             bn2.activation = "identity"
             layers = [
-                ("conv1", nn.Conv2d(in_channels, channels[0], 3, stride=stride, padding=dilation, bias=False,
-                                    dilation=dilation)),
+                (
+                    "conv1",
+                    nn.Conv2d(
+                        in_channels,
+                        channels[0],
+                        3,
+                        stride=stride,
+                        padding=dilation,
+                        bias=False,
+                        dilation=dilation,
+                    ),
+                ),
                 ("bn1", norm_act(channels[0])),
-                ("conv2", nn.Conv2d(channels[0], channels[1], 3, stride=1, padding=dilation, bias=False,
-                                    dilation=dilation)),
-                ("bn2", bn2)
+                (
+                    "conv2",
+                    nn.Conv2d(
+                        channels[0],
+                        channels[1],
+                        3,
+                        stride=1,
+                        padding=dilation,
+                        bias=False,
+                        dilation=dilation,
+                    ),
+                ),
+                ("bn2", bn2),
             ]
             if dropout is not None:
                 layers = layers[0:2] + [("dropout", dropout())] + layers[2:]
@@ -66,20 +89,43 @@ class ResidualBlock(nn.Module):
             bn3 = norm_act(channels[2])
             bn3.activation = "identity"
             layers = [
-                ("conv1", nn.Conv2d(in_channels, channels[0], 1, stride=1, padding=0, bias=False)),
+                (
+                    "conv1",
+                    nn.Conv2d(
+                        in_channels, channels[0], 1, stride=1, padding=0, bias=False
+                    ),
+                ),
                 ("bn1", norm_act(channels[0])),
-                ("conv2", nn.Conv2d(channels[0], channels[1], 3, stride=stride, padding=dilation, bias=False,
-                                    groups=groups, dilation=dilation)),
+                (
+                    "conv2",
+                    nn.Conv2d(
+                        channels[0],
+                        channels[1],
+                        3,
+                        stride=stride,
+                        padding=dilation,
+                        bias=False,
+                        groups=groups,
+                        dilation=dilation,
+                    ),
+                ),
                 ("bn2", norm_act(channels[1])),
-                ("conv3", nn.Conv2d(channels[1], channels[2], 1, stride=1, padding=0, bias=False)),
-                ("bn3", bn3)
+                (
+                    "conv3",
+                    nn.Conv2d(
+                        channels[1], channels[2], 1, stride=1, padding=0, bias=False
+                    ),
+                ),
+                ("bn3", bn3),
             ]
             if dropout is not None:
                 layers = layers[0:4] + [("dropout", dropout())] + layers[4:]
         self.convs = nn.Sequential(OrderedDict(layers))
 
         if need_proj_conv:
-            self.proj_conv = nn.Conv2d(in_channels, channels[-1], 1, stride=stride, padding=0, bias=False)
+            self.proj_conv = nn.Conv2d(
+                in_channels, channels[-1], 1, stride=stride, padding=0, bias=False
+            )
             self.proj_bn = norm_act(channels[-1])
             self.proj_bn.activation = "identity"
 
@@ -92,22 +138,28 @@ class ResidualBlock(nn.Module):
         x = self.convs(x) + residual
 
         if self.convs.bn1.activation == "leaky_relu":
-            return functional.leaky_relu(x, negative_slope=self.convs.bn1.activation_param, inplace=True)
+            return functional.leaky_relu(
+                x, negative_slope=self.convs.bn1.activation_param, inplace=True
+            )
         elif self.convs.bn1.activation == "elu":
-            return functional.elu(x, alpha=self.convs.bn1.activation_param, inplace=True)
+            return functional.elu(
+                x, alpha=self.convs.bn1.activation_param, inplace=True
+            )
         elif self.convs.bn1.activation == "identity":
             return x
 
 
 class IdentityResidualBlock(nn.Module):
-    def __init__(self,
-                 in_channels,
-                 channels,
-                 stride=1,
-                 dilation=1,
-                 groups=1,
-                 norm_act=ABN,
-                 dropout=None):
+    def __init__(
+        self,
+        in_channels,
+        channels,
+        stride=1,
+        dilation=1,
+        groups=1,
+        norm_act=ABN,
+        dropout=None,
+    ):
         """Configurable identity-mapping residual block
 
         Parameters
@@ -144,29 +196,77 @@ class IdentityResidualBlock(nn.Module):
         self.bn1 = norm_act(in_channels)
         if not is_bottleneck:
             layers = [
-                ("conv1", nn.Conv2d(in_channels, channels[0], 3, stride=stride, padding=dilation, bias=False,
-                                    dilation=dilation)),
+                (
+                    "conv1",
+                    nn.Conv2d(
+                        in_channels,
+                        channels[0],
+                        3,
+                        stride=stride,
+                        padding=dilation,
+                        bias=False,
+                        dilation=dilation,
+                    ),
+                ),
                 ("bn2", norm_act(channels[0])),
-                ("conv2", nn.Conv2d(channels[0], channels[1], 3, stride=1, padding=dilation, bias=False,
-                                    dilation=dilation))
+                (
+                    "conv2",
+                    nn.Conv2d(
+                        channels[0],
+                        channels[1],
+                        3,
+                        stride=1,
+                        padding=dilation,
+                        bias=False,
+                        dilation=dilation,
+                    ),
+                ),
             ]
             if dropout is not None:
                 layers = layers[0:2] + [("dropout", dropout())] + layers[2:]
         else:
             layers = [
-                ("conv1", nn.Conv2d(in_channels, channels[0], 1, stride=stride, padding=0, bias=False)),
+                (
+                    "conv1",
+                    nn.Conv2d(
+                        in_channels,
+                        channels[0],
+                        1,
+                        stride=stride,
+                        padding=0,
+                        bias=False,
+                    ),
+                ),
                 ("bn2", norm_act(channels[0])),
-                ("conv2", nn.Conv2d(channels[0], channels[1], 3, stride=1, padding=dilation, bias=False,
-                                    groups=groups, dilation=dilation)),
+                (
+                    "conv2",
+                    nn.Conv2d(
+                        channels[0],
+                        channels[1],
+                        3,
+                        stride=1,
+                        padding=dilation,
+                        bias=False,
+                        groups=groups,
+                        dilation=dilation,
+                    ),
+                ),
                 ("bn3", norm_act(channels[1])),
-                ("conv3", nn.Conv2d(channels[1], channels[2], 1, stride=1, padding=0, bias=False))
+                (
+                    "conv3",
+                    nn.Conv2d(
+                        channels[1], channels[2], 1, stride=1, padding=0, bias=False
+                    ),
+                ),
             ]
             if dropout is not None:
                 layers = layers[0:4] + [("dropout", dropout())] + layers[4:]
         self.convs = nn.Sequential(OrderedDict(layers))
 
         if need_proj_conv:
-            self.proj_conv = nn.Conv2d(in_channels, channels[-1], 1, stride=stride, padding=0, bias=False)
+            self.proj_conv = nn.Conv2d(
+                in_channels, channels[-1], 1, stride=stride, padding=0, bias=False
+            )
 
     def forward(self, x):
         if hasattr(self, "proj_conv"):

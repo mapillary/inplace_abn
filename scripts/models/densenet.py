@@ -1,23 +1,27 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+
 import sys
 from collections import OrderedDict
 from functools import partial
 
 import torch.nn as nn
-
 from inplace_abn import ABN
 from modules import GlobalAvgPool2d, DenseModule
+
 from .util import try_index
 
 
 class DenseNet(nn.Module):
-    def __init__(self,
-                 structure,
-                 norm_act=ABN,
-                 input_3x3=False,
-                 growth=32,
-                 theta=0.5,
-                 classes=0,
-                 dilation=1):
+    def __init__(
+        self,
+        structure,
+        norm_act=ABN,
+        input_3x3=False,
+        growth=32,
+        theta=0.5,
+        classes=0,
+        dilation=1,
+    ):
         """DenseNet
 
         Parameters
@@ -49,15 +53,25 @@ class DenseNet(nn.Module):
             layers = [
                 ("conv1", nn.Conv2d(3, growth * 2, 3, stride=2, padding=1, bias=False)),
                 ("bn1", norm_act(growth * 2)),
-                ("conv2", nn.Conv2d(growth * 2, growth * 2, 3, stride=1, padding=1, bias=False)),
+                (
+                    "conv2",
+                    nn.Conv2d(
+                        growth * 2, growth * 2, 3, stride=1, padding=1, bias=False
+                    ),
+                ),
                 ("bn2", norm_act(growth * 2)),
-                ("conv3", nn.Conv2d(growth * 2, growth * 2, 3, stride=1, padding=1, bias=False)),
-                ("pool", nn.MaxPool2d(3, stride=2, padding=1))
+                (
+                    "conv3",
+                    nn.Conv2d(
+                        growth * 2, growth * 2, 3, stride=1, padding=1, bias=False
+                    ),
+                ),
+                ("pool", nn.MaxPool2d(3, stride=2, padding=1)),
             ]
         else:
             layers = [
                 ("conv1", nn.Conv2d(3, growth * 2, 7, stride=2, padding=3, bias=False)),
-                ("pool", nn.MaxPool2d(3, stride=2, padding=1))
+                ("pool", nn.MaxPool2d(3, stride=2, padding=1)),
             ]
         self.mod1 = nn.Sequential(OrderedDict(layers))
 
@@ -71,25 +85,33 @@ class DenseNet(nn.Module):
                 out_channels = int(in_channels * theta)
                 layers = [
                     ("bn", norm_act(in_channels)),
-                    ("conv", nn.Conv2d(in_channels, out_channels, 1, bias=False))
+                    ("conv", nn.Conv2d(in_channels, out_channels, 1, bias=False)),
                 ]
                 if s == 2:
                     layers.append(("pool", nn.AvgPool2d(2, 2)))
-                self.add_module("tra%d" % (mod_id + 1), nn.Sequential(OrderedDict(layers)))
+                self.add_module(
+                    "tra%d" % (mod_id + 1), nn.Sequential(OrderedDict(layers))
+                )
                 in_channels = out_channels
 
             # Create dense module
-            mod = DenseModule(in_channels, growth, structure[mod_id], norm_act=norm_act, dilation=d)
+            mod = DenseModule(
+                in_channels, growth, structure[mod_id], norm_act=norm_act, dilation=d
+            )
             self.add_module("mod%d" % (mod_id + 2), mod)
             in_channels = mod.out_channels
 
         # Pooling and predictor
         self.bn_out = norm_act(in_channels)
         if classes != 0:
-            self.classifier = nn.Sequential(OrderedDict([
-                ("avg_pool", GlobalAvgPool2d()),
-                ("fc", nn.Linear(in_channels, classes))
-            ]))
+            self.classifier = nn.Sequential(
+                OrderedDict(
+                    [
+                        ("avg_pool", GlobalAvgPool2d()),
+                        ("fc", nn.Linear(in_channels, classes)),
+                    ]
+                )
+            )
 
     def forward(self, x):
         x = self.mod1(x)

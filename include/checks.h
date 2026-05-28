@@ -1,3 +1,5 @@
+// Copyright (c) Facebook, Inc. and its affiliates.
+
 #pragma once
 
 #include <ATen/ATen.h>
@@ -10,8 +12,13 @@
 
 #define CHECK_CUDA(x) IABN_CHECK((x).is_cuda(), #x " must be a CUDA tensor")
 #define CHECK_CPU(x) IABN_CHECK(!(x).is_cuda(), #x " must be a CPU tensor")
-#define CHECK_NOT_HALF(x) IABN_CHECK((x).scalar_type() != at::ScalarType::Half, #x " can't have type Half")
-#define CHECK_SAME_TYPE(x, y) IABN_CHECK((x).scalar_type() == (y).scalar_type(), #x " and " #y " must have the same scalar type")
+#define CHECK_NOT_HALF(x) \
+  IABN_CHECK(             \
+      (x).scalar_type() != at::ScalarType::Half, #x " can't have type Half")
+#define CHECK_SAME_TYPE(x, y)                 \
+  IABN_CHECK(                                 \
+      (x).scalar_type() == (y).scalar_type(), \
+      #x " and " #y " must have the same scalar type")
 
 inline bool have_same_dims(const at::Tensor& x, const at::Tensor& y) {
   bool success = x.ndimension() == y.ndimension();
@@ -27,7 +34,8 @@ inline bool is_compatible_weight(const at::Tensor& x, const at::Tensor& w) {
 
   // Typing check
   if (x.scalar_type() == at::ScalarType::Half) {
-    success &= (w.scalar_type() == at::ScalarType::Half) || (w.scalar_type() == at::ScalarType::Float);
+    success &= (w.scalar_type() == at::ScalarType::Half) ||
+        (w.scalar_type() == at::ScalarType::Float);
   } else {
     success &= x.scalar_type() == w.scalar_type();
   }

@@ -1,3 +1,5 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+
 from random import sample
 
 import torch
@@ -5,7 +7,11 @@ import torch
 # Default augmentation values compatible with ImageNet data augmentation pipeline
 _DEFAULT_ALPHASTD = 0.1
 _DEFAULT_EIGVAL = [0.2175, 0.0188, 0.0045]
-_DEFAULT_EIGVEC = [[-0.5675, 0.7192, 0.4009], [-0.5808, -0.0045, -0.8140], [-0.5836, -0.6948, 0.4203]]
+_DEFAULT_EIGVEC = [
+    [-0.5675, 0.7192, 0.4009],
+    [-0.5808, -0.0045, -0.8140],
+    [-0.5836, -0.6948, 0.4203],
+]
 _DEFAULT_BCS = [0.4, 0.4, 0.4]
 
 
@@ -19,13 +25,15 @@ def _blend(img1, img2, alpha):
 
 
 class Lighting:
-    def __init__(self, alphastd=_DEFAULT_ALPHASTD, eigval=_DEFAULT_EIGVAL, eigvec=_DEFAULT_EIGVEC):
+    def __init__(
+        self, alphastd=_DEFAULT_ALPHASTD, eigval=_DEFAULT_EIGVAL, eigvec=_DEFAULT_EIGVEC
+    ):
         self._alphastd = alphastd
         self._eigval = eigval
         self._eigvec = eigvec
 
     def __call__(self, img):
-        if self._alphastd == 0.:
+        if self._alphastd == 0.0:
             return img
 
         alpha = torch.normal(img.new_zeros(3), self._alphastd)
@@ -36,7 +44,7 @@ class Lighting:
         return img + rgb.view(3, 1, 1)
 
 
-class Saturation(object):
+class Saturation:
     def __init__(self, var):
         self._var = var
 
@@ -46,7 +54,7 @@ class Saturation(object):
         return _blend(img, gs, alpha)
 
 
-class Brightness(object):
+class Brightness:
     def __init__(self, var):
         self._var = var
 
@@ -56,7 +64,7 @@ class Brightness(object):
         return _blend(img, gs, alpha)
 
 
-class Contrast(object):
+class Contrast:
     def __init__(self, var):
         self._var = var
 
@@ -67,8 +75,13 @@ class Contrast(object):
         return _blend(img, gs, alpha)
 
 
-class ColorJitter(object):
-    def __init__(self, saturation=_DEFAULT_BCS[0], brightness=_DEFAULT_BCS[1], contrast=_DEFAULT_BCS[2]):
+class ColorJitter:
+    def __init__(
+        self,
+        saturation=_DEFAULT_BCS[0],
+        brightness=_DEFAULT_BCS[1],
+        contrast=_DEFAULT_BCS[2],
+    ):
         self._transforms = []
         if saturation is not None:
             self._transforms.append(Saturation(saturation))

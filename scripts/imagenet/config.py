@@ -1,3 +1,5 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+
 import json
 
 DEFAULTS = {
@@ -10,23 +12,23 @@ DEFAULTS = {
         "classes": 1000,
         "dilation": 1,
         "weight_gain_multiplier": 1,  # note: this is ignored if weight_init == kaiming_*
-        "weight_init": "xavier_normal"  # supported: xavier_[normal,uniform], kaiming_[normal,uniform], orthogonal
+        "weight_init": "xavier_normal",  # supported: xavier_[normal,uniform], kaiming_[normal,uniform], orthogonal
     },
     "optimizer": {
         "batch_size": 256,
         "type": "SGD",  # supported: SGD, Adam
         "momentum": 0.9,
         "weight_decay": 1e-4,
-        "clip": 1.,
+        "clip": 1.0,
         "learning_rate": 0.1,
-        "classifier_lr": -1.,  # If -1 use same learning rate as the rest of the network
+        "classifier_lr": -1.0,  # If -1 use same learning rate as the rest of the network
         "nesterov": False,
         "schedule": {
             "type": "constant",  # supported: constant, step, multistep, exponential, linear
             "mode": "epoch",  # supported: epoch, step
             "epochs": 10,
-            "params": {}
-        }
+            "params": {},
+        },
     },
     "input": {
         "scale_train": -1,  # If -1 do not scale
@@ -36,8 +38,8 @@ DEFAULTS = {
         "scale_val": 256,  # If -1 do not scale
         "crop_val": 224,
         "mean": [0.485, 0.456, 0.406],
-        "std": [0.229, 0.224, 0.225]
-    }
+        "std": [0.229, 0.224, 0.225],
+    },
 }
 
 
