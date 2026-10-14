@@ -101,7 +101,7 @@ def main():
     try:
         world_size = int(os.environ["WORLD_SIZE"])
         distributed = world_size > 1
-    except:
+    except Exception:
         distributed = False
         world_size = 1
 
