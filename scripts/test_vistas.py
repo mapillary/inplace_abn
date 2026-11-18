@@ -1,10 +1,10 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 
 import argparse
-import subprocess
 import sys
 
 import torch
+from security.frameworks.python.exec.subprocess import TrustedSubprocessWithList
 
 parser = argparse.ArgumentParser(
     description="Testing script for the Vistas segmentation model"
@@ -70,8 +70,10 @@ def main():
             argslist.append(str(i))
         stdout = None if i == 0 else open("GPU_" + str(i) + ".log", "w")
         print(argslist)
-        p = subprocess.Popen(
-            [str(sys.executable), "test_vistas_single_gpu.py"] + argslist, stdout=stdout
+        p = TrustedSubprocessWithList.Popen(
+            executable=str(sys.executable),
+            cmd_args=["test_vistas_single_gpu.py"] + argslist,
+            stdout=stdout,
         )
         workers.append(p)
 
